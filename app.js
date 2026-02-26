@@ -4,14 +4,13 @@ if(process.env.NODE_ENV != "production"){ //to upload files cloudinary
 
 const express = require("express");
 const app = express();
-let port = 8000;
+const port = process.env.PORT || 8000;
 const mongoose = require("mongoose");
 const path = require("path");
 const methodOverride = require("method-override");
 const ejsMate = require('ejs-mate');
 // const wrapAsync = require("./utils/wrapAsync.js");
 const ExpressError = require("./utils/ExpressError.js");
-const { listingSchema ,reviewSchema } = require("./schema.js");
 const session = require("express-session");
 const MongoStore = require("connect-mongo");
 const flash = require("connect-flash");
@@ -24,15 +23,26 @@ const reviewRouter = require("./routes/review.js");
 const userRouter = require("./routes/user.js");
 const Listing = require("./models/listing.js");
 
-// const MONGO_URL = 'mongodb://127.0.0.1:27017/wanderlust';
 const DB_URL = process.env.DB_URL;
+const SECRET = process.env.SECRET;
+
+if (!DB_URL) {
+  throw new Error("DB_URL is required in environment variables");
+}
+
+if (!SECRET) {
+  throw new Error("SECRET is required in environment variables");
+}
 
 main()
   .then( () => {
-    console.log(`Connected to DB`);
+    console.log("Connected to DB");
+    app.listen(port, () => {
+      console.log(`Server running on port ${port}`);
+    });
   })
   .catch((err) => {
-    console.log(err)
+    console.log("DB connection failed:", err);
   });
 
 async function main() {
@@ -46,41 +56,40 @@ app.use(methodOverride("_method"));
 app.engine("ejs", ejsMate);
 app.use(express.static(path.join(__dirname , "/public")));
 
+if (process.env.NODE_ENV === "production") {
+  app.set("trust proxy", 1);
+}
 
-//Home Route
-// app.get("/", (req, res) => {
-//   res.send("Hi, I am root" );
-// });
 
 const store = MongoStore.create({
-  mongoUrl: "mongodb://localhost:27017/wanderlust",
+  mongoUrl: DB_URL,
   crypto: {
-    secret: process.env.SECRET,
+    secret: SECRET,
   },
   touchAfter: 24 * 3600,
 });
 
-store.on("error", () => {
+store.on("error", (err) => {
     console.log("ERROR IN MONGO SESSION STORE", err)
 })
 
-// Session & Cookies
 const sessionOptions = {
   store: store,
-  secret: process.env.SECRET,
+  secret: SECRET,
   resave: false,
-  saveUninitialized: true,
+  saveUninitialized: false,
   cookie: {
     expires: Date.now() + 7 * 24 * 60 * 60 * 1000,
     maxAge: 7 * 24 * 60 * 60 * 1000,
     httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
   },
 };
 
 app.use(session(sessionOptions));
 app.use(flash());
 
-//Authentication
 app.use(passport.initialize());
 app.use(passport.session());
 passport.use(new LocalStrategy(User.authenticate()));
@@ -96,7 +105,6 @@ app.use((req, res, next) => {
 });
 
 
-//Routes
 app.use("/listings", listingRouter );
 app.use("/listings/:id/reviews", reviewRouter );
 app.use("/", userRouter );
@@ -116,21 +124,6 @@ app.get("/search", async(req, res) => {
 })
 
 
-// app.get("/testListing", async (req, res) => {
-//      let sampleListing = new Listing({
-//       tital: "My new Villa",
-//       description: "By the beach",
-//       price: 1200,
-//       location: "Calangute, Goa",
-//       country: "India",
-//      });
-
-//      await sampleListing.save();
-//      console.log(`sample saved`);
-//      res.send(`successful testing`);
-// });
-
-
 app.all("*", (req, res, next) => {
   next(new ExpressError(404, "Page not found!"));
 });
@@ -142,6 +135,3 @@ app.use((err, req, res, next) => {
   // res.send("something went wrong!")
 });
 
-app.listen(port, () => {
-  console.log(`connection successful`);
-});
