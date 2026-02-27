@@ -17,8 +17,7 @@
         <p class="card-text"><b>Country:- </b><%= listing.country %></p>
       </div>
     </div>
-    
-   <% if(currUser && listing.owner && currUser._id.equals(listing.owner._id)){ %> 
+<!-- Edit and delete buttons only visible to the owner the listing and Admin of the website Logic Later i do-->
     <div class="show-btns">
       <a href="/listings/<%= listing._id %>/edit" class="btn show-btn-edit">Edit</a>
       <br> <br>
@@ -26,7 +25,7 @@
         <button class="btn btn-dark show-btn-dlt">Delete</button>
       </form>
     </div>
-   <% } %>
+   
 
     <hr>
 
