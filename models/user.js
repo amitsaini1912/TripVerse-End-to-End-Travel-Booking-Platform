@@ -6,6 +6,12 @@ const userSchema = new mongoose.Schema ({
         type: String,
         required: true,
     },
+    role: {
+        type: String,
+        enum: ["user", "host", "admin"],
+        default: "user",
+        required: true,
+    }, 
 });
 
 userSchema.plugin(passportLocalMongoose); //This plugin set a username and password in hash form 

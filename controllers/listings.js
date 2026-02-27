@@ -17,7 +17,7 @@ module.exports.showListing = async (req, res) => {
     const listing = await Listing.findById(id).populate({path: "reviews", populate: {path:"author"}}).populate("owner");
     if(!listing){
       req.flash("error", "listing not found or deleted");
-      res.redirect("/listings");
+      return res.redirect("/listings");
     }
     res.render("listings/show.ejs", { listing });
 };
@@ -30,8 +30,17 @@ module.exports.createNewListing = async (req, res, next) => {
       })
         .send(); 
 
-      let url = req.file.path;
-      let filename = req.file.filename;
+      if (!req.file) {
+        req.flash("error", "Please upload an image for the listing.");
+        return res.redirect("/listings/new");
+      }
+
+      const url = req.file.path || req.file.secure_url || req.file.url;
+      const filename = req.file.filename || req.file.public_id || "listing-image";
+      if (!url) {
+        req.flash("error", "Image upload failed. Please try again.");
+        return res.redirect("/listings/new");
+      }
       const newListing = new Listing(req.body.listing);
       newListing.owner = req.user._id; //to save user info who created listing
       newListing.image = {url, filename};
@@ -64,10 +73,12 @@ module.exports.updateListing = async (req, res) => {
     let { id } = req.params;
     let listing = await Listing.findByIdAndUpdate(id, { ...req.body.listing });
     if(typeof req.file !== "undefined"){
-      let url = req.file.path;
-      let filename = req.file.filename;
-      listing.image = {url, filename};
-      await listing.save();
+      const url = req.file.path || req.file.secure_url || req.file.url;
+      const filename = req.file.filename || req.file.public_id || "listing-image";
+      if (url) {
+        listing.image = {url, filename};
+        await listing.save();
+      }
     }
     req.flash("success", "listing Edited success");
     res.redirect(`/listings/${id}`);

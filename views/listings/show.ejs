@@ -8,9 +8,9 @@
     <h3><%= listing.title %></h3>
 
     <div class="card col listing-card">
-      <img src="<%= listing.image.url %>" class="card-img-top" style="height: 20rem;" alt="Listing_image">
+      <img src="<%= (listing.image && listing.image.url) ? listing.image.url : 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?q=80&w=1200&auto=format&fit=crop' %>" class="card-img-top" style="height: 20rem;" alt="Listing_image">
       <div class="card-body">
-        <p class="card-text mt-3"><i>OwnedBy_<%= listing.owner.username %></i></p>
+        <p class="card-text mt-3"><i>OwnedBy_<%= listing.owner ? listing.owner.username : "Unknown host" %></i></p>
         <p class="card-text mt-3"><b>About:- </b><%= listing.description %></p>
         <p class="card-text"><b>Price:- </b> &#8377;<%= listing.price.toLocaleString("en-IN") %></p>
         <p class="card-text"><b>Address:- </b><%= listing.location %></p>
@@ -18,7 +18,7 @@
       </div>
     </div>
     
-   <% if(currUser && currUser._id.equals(listing.owner._id)){ %> 
+   <% if(currUser && listing.owner && currUser._id.equals(listing.owner._id)){ %> 
     <div class="show-btns">
       <a href="/listings/<%= listing._id %>/edit" class="btn show-btn-edit">Edit</a>
       <br> <br>
