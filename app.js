@@ -21,6 +21,7 @@ const User = require("./models/user.js");
 const listingRouter = require("./routes/listing.js");
 const reviewRouter = require("./routes/review.js");
 const userRouter = require("./routes/user.js");
+const adminRouter = require("./routes/admin.js");
 const Listing = require("./models/listing.js");
 
 const DB_URL = process.env.DB_URL;
@@ -108,6 +109,7 @@ app.use((req, res, next) => {
 app.use("/listings", listingRouter );
 app.use("/listings/:id/reviews", reviewRouter );
 app.use("/", userRouter );
+app.use("/admin", adminRouter);
 app.get("/search", async(req, res) => {
    const key = req.query.key;
    let resultListings = await Listing.find(

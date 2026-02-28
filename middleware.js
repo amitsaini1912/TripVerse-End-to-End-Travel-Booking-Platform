@@ -31,6 +31,8 @@ module.exports.hasRole = (...allowedRoles) => {
   };
 };
 
+module.exports.isAdmin = module.exports.hasRole("admin");
+
 //redirectUrl save in locals
 // module.exports.saveRedirectUrl = (req, res, next) => {
 //     if(req.session.redirectUrl){
