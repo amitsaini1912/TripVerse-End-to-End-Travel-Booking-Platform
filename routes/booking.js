@@ -4,6 +4,8 @@ const { isLoggedIn } = require("../middleware");
 const bookingController = require("../controllers/bookings");
 
 router.get("/me", isLoggedIn, bookingController.getMyBookings);
+router.get("/host", isLoggedIn, bookingController.getHostBookings);
+router.patch("/:bookingId/status", isLoggedIn, bookingController.updateBookingStatus);
 router.patch("/:bookingId/cancel", isLoggedIn, bookingController.cancelBooking);
 
 module.exports = router;

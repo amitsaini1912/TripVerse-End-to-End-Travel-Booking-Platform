@@ -94,6 +94,74 @@ module.exports.getMyBookings = async (req, res, next) => {
   }
 };
 
+module.exports.getHostBookings = async (req, res, next) => {
+  try {
+    const query = req.user.role === "admin" ? {} : { host: req.user._id };
+    const hostBookings = await Booking.find(query)
+      .populate("listing")
+      .populate("guest", "username email")
+      .sort({ createdAt: -1 });
+
+    return res.render("bookings/host.ejs", { hostBookings });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports.updateBookingStatus = async (req, res, next) => {
+  try {
+    const { bookingId } = req.params;
+    const { status } = req.body;
+    const allowedStatuses = ["confirmed", "rejected"];
+
+    if (!allowedStatuses.includes(status)) {
+      req.flash("error", "Invalid booking status update request.");
+      return res.redirect("/bookings/host");
+    }
+
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      req.flash("error", "Booking not found.");
+      return res.redirect("/bookings/host");
+    }
+
+    const isAdmin = req.user.role === "admin";
+    const isHost = booking.host.equals(req.user._id);
+    if (!isAdmin && !isHost) {
+      req.flash("error", "You are not authorized to update this booking.");
+      return res.redirect("/bookings/host");
+    }
+
+    if (booking.status !== "pending") {
+      req.flash("error", "Only pending bookings can be updated.");
+      return res.redirect("/bookings/host");
+    }
+
+    if (status === "confirmed") {
+      const conflictingConfirmedBooking = await Booking.findOne({
+        _id: { $ne: booking._id },
+        listing: booking.listing,
+        status: "confirmed",
+        checkIn: { $lt: booking.checkOut },
+        checkOut: { $gt: booking.checkIn },
+      });
+
+      if (conflictingConfirmedBooking) {
+        req.flash("error", "Cannot confirm due to date conflict with another confirmed booking.");
+        return res.redirect("/bookings/host");
+      }
+    }
+
+    booking.status = status;
+    await booking.save();
+
+    req.flash("success", `Booking ${status} successfully.`);
+    return res.redirect("/bookings/host");
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports.cancelBooking = async (req, res, next) => {
   try {
     const { bookingId } = req.params;
@@ -111,8 +179,8 @@ module.exports.cancelBooking = async (req, res, next) => {
       return res.redirect("/bookings/me");
     }
 
-    if (booking.status === "cancelled") {
-      req.flash("error", "Booking is already cancelled.");
+    if (booking.status === "cancelled" || booking.status === "rejected") {
+      req.flash("error", "This booking can no longer be cancelled.");
       return res.redirect("/bookings/me");
     }
 
