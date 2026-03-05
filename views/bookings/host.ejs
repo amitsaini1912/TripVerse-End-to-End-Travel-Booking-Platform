@@ -2,7 +2,10 @@
 
 <div class="row mt-3">
   <div class="col-10 offset-1">
-    <h3>Host Booking Requests</h3>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h3>Host Booking Requests</h3>
+      <a href="/bookings/host/dashboard" class="btn btn-outline-dark btn-sm">View Analytics</a>
+    </div>
 
     <% if (hostBookings.length === 0) { %>
       <div class="alert alert-info mt-3">

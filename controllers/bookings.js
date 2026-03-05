@@ -108,6 +108,74 @@ module.exports.getHostBookings = async (req, res, next) => {
   }
 };
 
+module.exports.getHostDashboard = async (req, res, next) => {
+  try {
+    const query = req.user.role === "admin" ? {} : { host: req.user._id };
+    const hostBookings = await Booking.find(query)
+      .populate("listing", "title location image")
+      .sort({ createdAt: -1 });
+
+    const listingStatsMap = new Map();
+
+    for (const booking of hostBookings) {
+      const listingId = booking.listing ? booking.listing._id.toString() : "unavailable";
+
+      if (!listingStatsMap.has(listingId)) {
+        listingStatsMap.set(listingId, {
+          listing: booking.listing || null,
+          totalBookings: 0,
+          pending: 0,
+          confirmed: 0,
+          rejected: 0,
+          cancelled: 0,
+          confirmedRevenue: 0,
+        });
+      }
+
+      const stats = listingStatsMap.get(listingId);
+      stats.totalBookings += 1;
+
+      if (booking.status === "pending") stats.pending += 1;
+      if (booking.status === "confirmed") {
+        stats.confirmed += 1;
+        stats.confirmedRevenue += booking.totalAmount || 0;
+      }
+      if (booking.status === "rejected") stats.rejected += 1;
+      if (booking.status === "cancelled") stats.cancelled += 1;
+    }
+
+    const listingStats = Array.from(listingStatsMap.values()).sort(
+      (a, b) => b.totalBookings - a.totalBookings
+    );
+
+    const overallStats = listingStats.reduce(
+      (acc, item) => {
+        acc.totalListings += 1;
+        acc.totalBookings += item.totalBookings;
+        acc.pending += item.pending;
+        acc.confirmed += item.confirmed;
+        acc.rejected += item.rejected;
+        acc.cancelled += item.cancelled;
+        acc.confirmedRevenue += item.confirmedRevenue;
+        return acc;
+      },
+      {
+        totalListings: 0,
+        totalBookings: 0,
+        pending: 0,
+        confirmed: 0,
+        rejected: 0,
+        cancelled: 0,
+        confirmedRevenue: 0,
+      }
+    );
+
+    return res.render("bookings/dashboard.ejs", { listingStats, overallStats });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports.updateBookingStatus = async (req, res, next) => {
   try {
     const { bookingId } = req.params;

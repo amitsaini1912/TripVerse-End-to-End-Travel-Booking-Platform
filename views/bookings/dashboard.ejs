@@ -1,0 +1,74 @@
+
+
+<div class="row mt-3">
+  <div class="col-10 offset-1">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h3>Host Analytics</h3>
+      <a href="/bookings/host" class="btn btn-outline-dark btn-sm">View Requests</a>
+    </div>
+
+    <div class="row g-3 mb-4">
+      <div class="col-md-3">
+        <div class="card text-center h-100">
+          <div class="card-body">
+            <h6 class="card-title">Listings</h6>
+            <h4><%= overallStats.totalListings %></h4>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center h-100">
+          <div class="card-body">
+            <h6 class="card-title">Bookings</h6>
+            <h4><%= overallStats.totalBookings %></h4>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center h-100">
+          <div class="card-body">
+            <h6 class="card-title">Confirmed</h6>
+            <h4><%= overallStats.confirmed %></h4>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center h-100">
+          <div class="card-body">
+            <h6 class="card-title">Confirmed Revenue</h6>
+            <h4>INR <%= overallStats.confirmedRevenue.toLocaleString("en-IN") %></h4>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <% if (listingStats.length === 0) { %>
+      <div class="alert alert-info">No booking data available yet.</div>
+    <% } else { %>
+      <div class="row">
+        <% for (const item of listingStats) { %>
+          <div class="col-lg-6 mb-3">
+            <div class="card h-100">
+              <img
+                src="<%= (item.listing && item.listing.image && item.listing.image.url) ? item.listing.image.url : 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?q=80&w=1200&auto=format&fit=crop' %>"
+                class="card-img-top"
+                alt="analytics_listing_image"
+                style="height: 14rem;"
+              >
+              <div class="card-body">
+                <h5 class="card-title"><%= item.listing ? item.listing.title : "Listing unavailable" %></h5>
+                <p class="card-text mb-1"><b>Location:</b> <%= item.listing ? item.listing.location : "N/A" %></p>
+                <p class="card-text mb-1"><b>Total Bookings:</b> <%= item.totalBookings %></p>
+                <p class="card-text mb-1"><b>Pending:</b> <%= item.pending %></p>
+                <p class="card-text mb-1"><b>Confirmed:</b> <%= item.confirmed %></p>
+                <p class="card-text mb-1"><b>Rejected:</b> <%= item.rejected %></p>
+                <p class="card-text mb-1"><b>Cancelled:</b> <%= item.cancelled %></p>
+                <p class="card-text mb-1"><b>Confirmed Revenue:</b> INR <%= item.confirmedRevenue.toLocaleString("en-IN") %></p>
+              </div>
+            </div>
+          </div>
+        <% } %>
+      </div>
+    <% } %>
+  </div>
+</div>
