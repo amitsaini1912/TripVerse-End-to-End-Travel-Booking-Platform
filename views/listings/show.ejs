@@ -17,7 +17,8 @@
         <p class="card-text"><b>Country:- </b><%= listing.country %></p>
       </div>
     </div>
-<!-- Edit and delete buttons only visible to the owner the listing and Admin of the website Logic Later i do-->
+<!-- Edit and delete buttons only visible to owner/admin -->
+    <% if(currUser && listing.owner && (currUser._id.equals(listing.owner._id) || currUser.role === "admin")){ %>
     <div class="show-btns">
       <a href="/listings/<%= listing._id %>/edit" class="btn show-btn-edit">Edit</a>
       <br> <br>
@@ -25,6 +26,7 @@
         <button class="btn btn-dark show-btn-dlt">Delete</button>
       </form>
     </div>
+    <% } %>
    
 
     <hr>
@@ -32,7 +34,7 @@
     <div class="col mb-4">
       <h3>Book this stay</h3>
       <% if(currUser){ %>
-      <form action="/listings/<%= listing._id %>/bookings" method="POST" class="row g-3 needs-validation" novalidate>
+      <form id="bookingForm" action="/listings/<%= listing._id %>/bookings" method="POST" class="row g-3 needs-validation" novalidate>
         <div class="col-md-4">
           <label for="checkIn" class="form-label">Check-in</label>
           <input type="date" id="checkIn" name="booking[checkIn]" class="form-control" required>
@@ -49,6 +51,7 @@
           <div class="invalid-feedback">Please enter guest count.</div>
         </div>
         <div class="col-12">
+          <p id="availabilityMsg" class="text-danger mb-2" style="display:none;"></p>
           <button class="btn btn-dark">Book Now</button>
         </div>
       </form>
@@ -122,6 +125,8 @@
         const today = new Date().toISOString().split("T")[0];
         const checkInInput = document.getElementById("checkIn");
         const checkOutInput = document.getElementById("checkOut");
+        const bookingForm = document.getElementById("bookingForm");
+        const availabilityMsg = document.getElementById("availabilityMsg");
 
         if (checkInInput && checkOutInput) {
           checkInInput.min = today;
@@ -129,6 +134,40 @@
 
           checkInInput.addEventListener("change", () => {
             checkOutInput.min = checkInInput.value || today;
+          });
+        }
+
+        if (bookingForm && checkInInput && checkOutInput && availabilityMsg) {
+          let isSubmitting = false;
+
+          bookingForm.addEventListener("submit", async (event) => {
+            if (isSubmitting) return;
+
+            const checkIn = checkInInput.value;
+            const checkOut = checkOutInput.value;
+            if (!checkIn || !checkOut) return;
+
+            event.preventDefault();
+            availabilityMsg.style.display = "none";
+            availabilityMsg.innerText = "";
+
+            try {
+              const query = new URLSearchParams({ checkIn, checkOut });
+              const response = await fetch(`/listings/<%= listing._id %>/bookings/availability?${query.toString()}`);
+              const data = await response.json();
+
+              if (!response.ok || !data.available) {
+                availabilityMsg.innerText = data.message || "Selected dates are not available.";
+                availabilityMsg.style.display = "block";
+                return;
+              }
+
+              isSubmitting = true;
+              bookingForm.submit();
+            } catch (err) {
+              availabilityMsg.innerText = "Could not verify availability. Please try again.";
+              availabilityMsg.style.display = "block";
+            }
           });
         }
       </script>

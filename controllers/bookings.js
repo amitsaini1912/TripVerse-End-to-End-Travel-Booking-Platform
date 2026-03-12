@@ -7,6 +7,16 @@ function normalizeToStartOfDay(inputDate) {
   return date;
 }
 
+async function findOverlapBooking(listingId, checkIn, checkOut, extraQuery = {}) {
+  return Booking.findOne({
+    listing: listingId,
+    status: { $in: ["pending", "confirmed"] },
+    checkIn: { $lt: checkOut },
+    checkOut: { $gt: checkIn },
+    ...extraQuery,
+  });
+}
+
 module.exports.createBooking = async (req, res, next) => {
   try {
     const { id: listingId } = req.params;
@@ -49,12 +59,7 @@ module.exports.createBooking = async (req, res, next) => {
     const nights = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24));
     const totalAmount = Math.max(0, nights * (listing.price || 0));
 
-    const overlapBooking = await Booking.findOne({
-      listing: listing._id,
-      status: { $in: ["pending", "confirmed"] },
-      checkIn: { $lt: checkOut },
-      checkOut: { $gt: checkIn },
-    });
+    const overlapBooking = await findOverlapBooking(listing._id, checkIn, checkOut);
 
     if (overlapBooking) {
       req.flash("error", "Selected dates are not available for this listing.");
@@ -77,6 +82,51 @@ module.exports.createBooking = async (req, res, next) => {
     await booking.save();
     req.flash("success", "Booking created successfully.");
     return res.redirect(`/listings/${listingId}`);
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports.checkAvailability = async (req, res, next) => {
+  try {
+    const { id: listingId } = req.params;
+    const { checkIn: checkInRaw, checkOut: checkOutRaw } = req.query;
+
+    const listing = await Listing.findById(listingId);
+    if (!listing) {
+      return res.status(404).json({ available: false, message: "Listing not found." });
+    }
+
+    const checkIn = normalizeToStartOfDay(checkInRaw);
+    const checkOut = normalizeToStartOfDay(checkOutRaw);
+    const today = normalizeToStartOfDay(new Date());
+
+    if (Number.isNaN(checkIn.getTime()) || Number.isNaN(checkOut.getTime())) {
+      return res.status(400).json({ available: false, message: "Invalid dates." });
+    }
+
+    if (checkIn < today || checkOut <= checkIn) {
+      return res.status(400).json({
+        available: false,
+        message: "Check-out must be after check-in and dates cannot be in the past.",
+      });
+    }
+
+    const overlapBooking = await findOverlapBooking(listing._id, checkIn, checkOut);
+
+    if (!overlapBooking) {
+      return res.json({ available: true });
+    }
+
+    return res.json({
+      available: false,
+      message: "Selected dates are not available.",
+      conflict: {
+        checkIn: overlapBooking.checkIn,
+        checkOut: overlapBooking.checkOut,
+        status: overlapBooking.status,
+      },
+    });
   } catch (err) {
     next(err);
   }
@@ -206,13 +256,12 @@ module.exports.updateBookingStatus = async (req, res, next) => {
     }
 
     if (status === "confirmed") {
-      const conflictingConfirmedBooking = await Booking.findOne({
-        _id: { $ne: booking._id },
-        listing: booking.listing,
-        status: "confirmed",
-        checkIn: { $lt: booking.checkOut },
-        checkOut: { $gt: booking.checkIn },
-      });
+      const conflictingConfirmedBooking = await findOverlapBooking(
+        booking.listing,
+        booking.checkIn,
+        booking.checkOut,
+        { _id: { $ne: booking._id }, status: "confirmed" }
+      );
 
       if (conflictingConfirmedBooking) {
         req.flash("error", "Cannot confirm due to date conflict with another confirmed booking.");
