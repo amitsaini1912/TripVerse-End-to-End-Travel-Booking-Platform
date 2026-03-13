@@ -306,6 +306,14 @@ module.exports.cancelBooking = async (req, res, next) => {
       return res.redirect("/bookings/me");
     }
 
+    // Prevent cancellation once the booking has started
+    const today = normalizeToStartOfDay(new Date());
+    const bookingStart = normalizeToStartOfDay(booking.checkIn);
+    if (today >= bookingStart) {
+      req.flash("error", "Bookings can only be cancelled before the check-in date.");
+      return res.redirect("/bookings/me");
+    }
+
     booking.status = "cancelled";
     await booking.save();
 
