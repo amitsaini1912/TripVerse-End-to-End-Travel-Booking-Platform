@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const Listing = require("../models/listing.js");
 // const wrapAsync = require("../utils/wrapAsync.js");
-const {isLoggedIn, isOwnerOrAdmin, validateListing} = require("../middleware.js");
+const {isLoggedIn, isHostOrAdmin, isOwnerOrAdmin, validateListing} = require("../middleware.js");
 const listingControllers = require("../controllers/listings.js")
 const multer = require("multer"); //to parse file data to backend
 const {storage} = require("../cloudConfig.js");
@@ -11,12 +11,10 @@ const upload = multer({ storage })
 router
   .route("/")
   .get(listingControllers.index)
-  .post(isLoggedIn, upload.single("listing[image]"),//to parse file data to abckend
-   listingControllers.createNewListing); // If i want Host and Admin both can create listing 
-                                         // then i will use hasRole middleware instead of isLoggedIn and
-                                         // pass allowed role as argument like this hasRole("host", "admin")
+  .post(isLoggedIn, isHostOrAdmin, upload.single("listing[image]"),
+   listingControllers.createNewListing);
 
-router.get("/new", isLoggedIn, listingControllers.renderNewForm);
+router.get("/new", isLoggedIn, isHostOrAdmin, listingControllers.renderNewForm);
   
 router
   .route("/:id")   

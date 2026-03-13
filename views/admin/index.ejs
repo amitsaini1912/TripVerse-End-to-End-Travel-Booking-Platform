@@ -1,0 +1,87 @@
+<% layout("./layouts/boilerplate.ejs") -%>
+
+<div class="row mt-3">
+  <div class="col-10 offset-1">
+    <h3>Admin Panel</h3>
+
+    <div class="row g-3 mt-1 mb-4">
+      <div class="col-md-4">
+        <div class="card text-center h-100">
+          <div class="card-body">
+            <h6 class="card-title">Users</h6>
+            <h4><%= stats.users %></h4>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card text-center h-100">
+          <div class="card-body">
+            <h6 class="card-title">Listings</h6>
+            <h4><%= stats.listings %></h4>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card text-center h-100">
+          <div class="card-body">
+            <h6 class="card-title">Reviews</h6>
+            <h4><%= stats.reviews %></h4>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h4 class="mb-3">Pending Host Requests</h4>
+    <% if (pendingHostRequests.length === 0) { %>
+      <div class="alert alert-info">There are no pending host requests.</div>
+    <% } else { %>
+      <div class="row">
+        <% for (const user of pendingHostRequests) { %>
+          <div class="col-lg-6 mb-3">
+            <div class="card h-100">
+              <div class="card-body">
+                <h5 class="card-title"><%= user.username %></h5>
+                <p class="card-text mb-1"><b>Email:</b> <%= user.email %></p>
+                <p class="card-text mb-1"><b>Phone:</b> <%= user.hostRequestPhone || "N/A" %></p>
+                <p class="card-text mb-2"><b>Reason:</b> <%= user.hostRequestReason || "N/A" %></p>
+
+                <div class="d-flex gap-2">
+                  <form method="POST" action="/admin/users/<%= user._id %>/approve-host?_method=PATCH">
+                    <button class="btn btn-success btn-sm">Approve Host</button>
+                  </form>
+                  <form method="POST" action="/admin/users/<%= user._id %>/reject-host?_method=PATCH">
+                    <button class="btn btn-outline-danger btn-sm">Reject</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        <% } %>
+      </div>
+    <% } %>
+
+    <h4 class="mt-4 mb-3">All Users</h4>
+    <div class="table-responsive">
+      <table class="table table-bordered align-middle">
+        <thead>
+          <tr>
+            <th>Username</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Host Request</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% for (const user of users) { %>
+            <tr>
+              <td><%= user.username %></td>
+              <td><%= user.email %></td>
+              <td><%= user.role %></td>
+              <td><%= user.hostRequestStatus %></td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

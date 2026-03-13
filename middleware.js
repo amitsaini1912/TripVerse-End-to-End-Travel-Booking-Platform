@@ -1,6 +1,6 @@
 const Listing = require("./models/listing.js");
 const ExpressError = require("./utils/ExpressError.js");
-const { listingSchema, reviewSchema, bookingSchema } = require("./schema.js");
+const { listingSchema, reviewSchema, bookingSchema, hostRequestSchema } = require("./schema.js");
 const Review = require("./models/review.js");
 
 module.exports.isLoggedIn = (req, res, next) => {
@@ -32,6 +32,7 @@ module.exports.hasRole = (...allowedRoles) => {
 };
 
 module.exports.isAdmin = module.exports.hasRole("admin");
+module.exports.isHostOrAdmin = module.exports.hasRole("host", "admin");
 
 //redirectUrl save in locals
 // module.exports.saveRedirectUrl = (req, res, next) => {
@@ -116,6 +117,44 @@ module.exports.validateBooking = (req, res, next) => {
     const errMsg = error.details.map((el) => el.message).join(",");
     throw new ExpressError(400, errMsg);
   }
+  next();
+};
+
+module.exports.validateHostRequest = (req, res, next) => {
+  const { error } = hostRequestSchema.validate(req.body);
+  if (error) {
+    const errMsg = error.details.map((el) => el.message).join(",");
+    throw new ExpressError(400, errMsg);
+  }
+  next();
+};
+
+module.exports.canRequestHostAccess = (req, res, next) => {
+  if (!req.isAuthenticated()) {
+    req.flash("error", "You must logged in before make change!");
+    return res.redirect("/login");
+  }
+
+  const userRole = req.user.role || "user";
+  if (userRole !== "user") {
+    req.flash("error", "Only normal users can submit a host request.");
+    return res.redirect("/listings");
+  }
+
+  next();
+};
+
+module.exports.canBookListings = (req, res, next) => {
+  if (!req.isAuthenticated()) {
+    req.flash("error", "You must logged in before make change!");
+    return res.redirect("/login");
+  }
+
+  if ((req.user.role || "user") === "host") {
+    req.flash("error", "Hosts cannot book listings.");
+    return res.redirect("/listings");
+  }
+
   next();
 };
 

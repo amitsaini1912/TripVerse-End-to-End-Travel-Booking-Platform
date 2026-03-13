@@ -40,15 +40,28 @@
           </form>
         </div>
         <div class="navbar-nav ms-auto">
-          <a class="nav-link active" href="/listings/new">WanderLust your home</a>
         <%  if(!currUser){ %>
             <a class="nav-link active" href="/signup"><b>SignUp</b></a>
             <a class="nav-link active" href="/login"><b>Login</b></a>
         <% } %>
         <%  if(currUser){ %>  
-          <a class="nav-link active" href="/bookings/me"><b>My Bookings</b></a>
-          <a class="nav-link active" href="/bookings/host"><b>Host Booking Requests</b></a>
-          <a class="nav-link active" href="/bookings/host/dashboard"><b>Host Analytics</b></a>
+          <% if(currUser.role === "host" || currUser.role === "admin"){ %>
+            <a class="nav-link active" href="/listings/new">WanderLust your home</a>
+            <a class="nav-link active" href="/bookings/host"><b>Host Booking Requests</b></a>
+            <a class="nav-link active" href="/bookings/host/dashboard"><b>Host Analytics</b></a>
+          <% } %>
+          <% if(currUser.role === "user" || currUser.role === "admin"){ %>
+            <a class="nav-link active" href="/bookings/me"><b>My Bookings</b></a>
+          <% } %>
+          <% if(currUser.role === "user" && currUser.hostRequestStatus !== "pending"){ %>
+            <a class="nav-link active" href="/become-host"><b>Become a Host</b></a>
+          <% } %>
+          <% if(currUser.role === "user" && currUser.hostRequestStatus === "pending"){ %>
+            <span class="nav-link text-warning"><b>Host Request Pending</b></span>
+          <% } %>
+          <% if(currUser.role === "admin"){ %>
+            <a class="nav-link active" href="/admin"><b>Admin Panel</b></a>
+          <% } %>
           <a class="nav-link active" href="/logout">Logout</a>
         <% } %>  
         </div>

@@ -5,6 +5,9 @@ const adminController = require("../controllers/admin.js");
 
 router
       .route("/")
-      .get(isLoggedIn, isAdmin, adminController.admin)
+      .get(isLoggedIn, isAdmin, adminController.renderDashboard);
+
+router.patch("/users/:id/approve-host", isLoggedIn, isAdmin, adminController.approveHostRequest);
+router.patch("/users/:id/reject-host", isLoggedIn, isAdmin, adminController.rejectHostRequest);
 
 module.exports = router;

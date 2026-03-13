@@ -101,6 +101,10 @@ passport.deserializeUser(User.deserializeUser());
 
 
 app.use((req, res, next) => {
+  if (req.user) {
+    if (!req.user.role) req.user.role = "user";
+    if (!req.user.hostRequestStatus) req.user.hostRequestStatus = "none";
+  }
   res.locals.success = req.flash("success");
   res.locals.error = req.flash("error");
   res.locals.currUser = req.user;

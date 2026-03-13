@@ -31,6 +31,11 @@ module.exports.createBooking = async (req, res, next) => {
       return res.redirect("/listings");
     }
 
+    if (req.user.role === "host") {
+      req.flash("error", "Hosts cannot book listings.");
+      return res.redirect(`/listings/${listingId}`);
+    }
+
     if (listing.owner && listing.owner.equals(req.user._id)) {
       req.flash("error", "You cannot book your own listing.");
       return res.redirect(`/listings/${listingId}`);

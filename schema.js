@@ -27,3 +27,10 @@ module.exports.bookingSchema = joi.object({
         guests: joi.number().integer().min(1).max(20).required(),
     }).required(),
 });
+
+module.exports.hostRequestSchema = joi.object({
+    hostRequest: joi.object({
+        phone: joi.string().trim().min(7).max(20).required(),
+        reason: joi.string().trim().min(20).max(500).required(),
+    }).required(),
+});

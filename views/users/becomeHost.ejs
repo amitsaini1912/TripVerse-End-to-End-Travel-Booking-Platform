@@ -1,0 +1,51 @@
+<% layout("./layouts/boilerplate.ejs") -%>
+
+<div class="row">
+  <div class="col-8 offset-2">
+    <h3>Become a Host</h3>
+    <p class="text-muted">
+      Submit your details for admin approval. Once approved, you can create listings.
+    </p>
+
+    <% if (user.hostRequestStatus === "pending") { %>
+      <div class="alert alert-warning">
+        Your host request is currently pending admin review.
+      </div>
+    <% } else if (user.hostRequestStatus === "rejected") { %>
+      <div class="alert alert-danger">
+        Your previous host request was rejected. You can update the form and apply again.
+      </div>
+    <% } %>
+
+    <form method="POST" action="/become-host" class="needs-validation" novalidate>
+      <div class="mt-3">
+        <label for="phone" class="form-label">Phone Number</label>
+        <input
+          name="hostRequest[phone]"
+          id="phone"
+          class="form-control"
+          type="text"
+          placeholder="Enter your contact number"
+          value="<%= user.hostRequestPhone || '' %>"
+          required
+        />
+        <div class="invalid-feedback">Please provide a valid phone number.</div>
+      </div>
+
+      <div class="mt-3">
+        <label for="reason" class="form-label">Why do you want to host?</label>
+        <textarea
+          name="hostRequest[reason]"
+          id="reason"
+          class="form-control"
+          rows="5"
+          placeholder="Tell the admin about your hosting plan"
+          required
+        ><%= user.hostRequestReason || '' %></textarea>
+        <div class="invalid-feedback">Please provide a short reason for your host request.</div>
+      </div>
+
+      <button class="btn btn-dark mt-4">Submit Host Request</button>
+    </form>
+  </div>
+</div>
