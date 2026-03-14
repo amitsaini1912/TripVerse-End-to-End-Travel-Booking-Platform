@@ -1,0 +1,77 @@
+<% layout("./layouts/boilerplate.ejs") -%>
+
+<div class="row mt-3">
+  <div class="col-8 offset-2">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h3>Checkout</h3>
+      <a href="/bookings/me" class="btn btn-outline-dark btn-sm">Back to My Bookings</a>
+    </div>
+
+    <div class="card">
+      <img
+        src="<%= (booking.listing && booking.listing.image && booking.listing.image.url) ? booking.listing.image.url : 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?q=80&w=1200&auto=format&fit=crop' %>"
+        class="card-img-top"
+        alt="checkout_listing_image"
+        style="height: 18rem;"
+      >
+      <div class="card-body">
+        <h5 class="card-title"><%= booking.listing ? booking.listing.title : "Listing unavailable" %></h5>
+        <p class="card-text mb-1"><b>Check-in:</b> <%= booking.checkIn.toDateString() %></p>
+        <p class="card-text mb-1"><b>Check-out:</b> <%= booking.checkOut.toDateString() %></p>
+        <p class="card-text mb-1"><b>Guests:</b> <%= booking.guests %></p>
+        <p class="card-text mb-1"><b>Total:</b> INR <%= booking.totalAmount.toLocaleString("en-IN") %></p>
+        <p class="card-text mb-3"><b>Payment Status:</b> <%= booking.paymentStatus %></p>
+
+        <% if (!stripePublishableKey) { %>
+          <div class="alert alert-warning mb-0">
+            Stripe publishable key is missing. Add `STRIPE_PUBLISHABLE_KEY` and `STRIPE_SECRET_KEY` to enable payments.
+          </div>
+        <% } else { %>
+          <p class="text-muted">
+            This step prepares the Stripe PaymentIntent. Card form confirmation will be connected in the next payment step.
+          </p>
+          <button id="preparePaymentBtn" class="btn btn-dark">Prepare Payment Session</button>
+          <div id="paymentFeedback" class="mt-3"></div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<% if (stripePublishableKey) { %>
+  <script>
+    const preparePaymentBtn = document.getElementById("preparePaymentBtn");
+    const paymentFeedback = document.getElementById("paymentFeedback");
+
+    if (preparePaymentBtn && paymentFeedback) {
+      preparePaymentBtn.addEventListener("click", async () => {
+        preparePaymentBtn.disabled = true;
+        preparePaymentBtn.innerText = "Preparing...";
+        paymentFeedback.innerHTML = "";
+
+        try {
+          const response = await fetch("/bookings/<%= booking._id %>/payment-intent", {
+            method: "POST",
+          });
+          const data = await response.json();
+
+          if (!response.ok) {
+            paymentFeedback.innerHTML = `<div class="alert alert-danger mb-0">${data.message || "Unable to prepare payment."}</div>`;
+          } else {
+            paymentFeedback.innerHTML = `
+              <div class="alert alert-success mb-0">
+                Payment session prepared successfully.<br>
+                Payment Intent ID: <b>${data.paymentIntentId}</b>
+              </div>
+            `;
+          }
+        } catch (err) {
+          paymentFeedback.innerHTML = '<div class="alert alert-danger mb-0">Unable to reach the payment service right now.</div>';
+        } finally {
+          preparePaymentBtn.disabled = false;
+          preparePaymentBtn.innerText = "Prepare Payment Session";
+        }
+      });
+    }
+  </script>
+<% } %>

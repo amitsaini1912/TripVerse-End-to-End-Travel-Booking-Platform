@@ -1,5 +1,6 @@
 const Booking = require("../models/booking");
 const Listing = require("../models/listing");
+const { getStripeClient, getStripePublishableKey } = require("../utils/stripe");
 
 function normalizeToStartOfDay(inputDate) {
   const date = new Date(inputDate);
@@ -15,6 +16,17 @@ async function findOverlapBooking(listingId, checkIn, checkOut, extraQuery = {})
     checkOut: { $gt: checkIn },
     ...extraQuery,
   });
+}
+
+async function getBookingForGuestOrAdmin(bookingId, userId, userRole) {
+  const booking = await Booking.findById(bookingId).populate("listing");
+  if (!booking) {
+    return { booking: null, isAuthorized: false };
+  }
+
+  const isAdmin = userRole === "admin";
+  const isGuest = booking.guest.equals(userId);
+  return { booking, isAuthorized: isAdmin || isGuest };
 }
 
 module.exports.createBooking = async (req, res, next) => {
@@ -146,6 +158,105 @@ module.exports.getMyBookings = async (req, res, next) => {
     return res.render("bookings/index.ejs", { myBookings });
   } catch (err) {
     next(err);
+  }
+};
+
+module.exports.renderCheckoutPage = async (req, res, next) => {
+  try {
+    const { booking, isAuthorized } = await getBookingForGuestOrAdmin(
+      req.params.bookingId,
+      req.user._id,
+      req.user.role
+    );
+
+    if (!booking) {
+      req.flash("error", "Booking not found.");
+      return res.redirect("/bookings/me");
+    }
+
+    if (!isAuthorized) {
+      req.flash("error", "You are not authorized to access this payment page.");
+      return res.redirect("/bookings/me");
+    }
+
+    if (booking.status !== "confirmed") {
+      req.flash("error", "Only confirmed bookings can proceed to payment.");
+      return res.redirect("/bookings/me");
+    }
+
+    res.render("bookings/checkout.ejs", {
+      booking,
+      stripePublishableKey: getStripePublishableKey(),
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports.createPaymentIntent = async (req, res, next) => {
+  try {
+    const { booking, isAuthorized } = await getBookingForGuestOrAdmin(
+      req.params.bookingId,
+      req.user._id,
+      req.user.role
+    );
+
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found." });
+    }
+
+    if (!isAuthorized) {
+      return res.status(403).json({ message: "You are not authorized for this payment." });
+    }
+
+    if (booking.status !== "confirmed") {
+      return res.status(400).json({ message: "Only confirmed bookings can be paid." });
+    }
+
+    if (booking.paymentStatus === "paid") {
+      return res.status(400).json({ message: "This booking is already paid." });
+    }
+
+    const stripe = getStripeClient();
+    let paymentIntent;
+
+    if (booking.paymentIntentId) {
+      paymentIntent = await stripe.paymentIntents.retrieve(booking.paymentIntentId);
+    }
+
+    if (!paymentIntent || paymentIntent.status === "canceled") {
+      paymentIntent = await stripe.paymentIntents.create(
+        {
+          amount: Math.round((booking.totalAmount || 0) * 100),
+          currency: (booking.currency || "INR").toLowerCase(),
+          automatic_payment_methods: { enabled: true },
+          metadata: {
+            bookingId: booking._id.toString(),
+            listingId: booking.listing ? booking.listing._id.toString() : "",
+            guestId: booking.guest.toString(),
+          },
+        },
+        {
+          idempotencyKey: `booking_${booking._id}_payment_intent`,
+        }
+      );
+
+      booking.paymentIntentId = paymentIntent.id;
+      booking.paymentStatus = "pending";
+      await booking.save();
+    }
+
+    return res.json({
+      clientSecret: paymentIntent.client_secret,
+      paymentIntentId: paymentIntent.id,
+      publishableKey: getStripePublishableKey(),
+      amount: booking.totalAmount,
+      currency: booking.currency,
+      paymentStatus: booking.paymentStatus,
+    });
+  } catch (err) {
+    const statusCode = err.statusCode || 500;
+    return res.status(statusCode).json({ message: err.message || "Unable to create payment intent." });
   }
 };
 
