@@ -1,6 +1,6 @@
 const Booking = require("../models/booking");
 const Listing = require("../models/listing");
-const { getStripeClient, getStripePublishableKey } = require("../utils/stripe");
+const { getStripeClient, getStripePublishableKey, getStripeWebhookSecret } = require("../utils/stripe");
 
 function normalizeToStartOfDay(inputDate) {
   const date = new Date(inputDate);
@@ -18,19 +18,28 @@ async function findOverlapBooking(listingId, checkIn, checkOut, extraQuery = {})
   });
 }
 
-function applyPaymentIntentToBooking(booking, paymentIntent) {
+function applyPaymentIntentToBooking(booking, paymentIntent, eventType = "") {
   if (!paymentIntent) return;
+
+  if (booking.paymentStatus === "paid" && paymentIntent.status !== "succeeded") {
+    return;
+  }
 
   booking.paymentIntentId = paymentIntent.id;
 
   if (paymentIntent.status === "succeeded") {
     booking.paymentStatus = "paid";
-    booking.paidAt = new Date();
+    booking.paidAt = booking.paidAt || new Date();
     return;
   }
 
   if (paymentIntent.status === "processing") {
     booking.paymentStatus = "processing";
+    return;
+  }
+
+  if (eventType === "payment_intent.payment_failed" || paymentIntent.status === "requires_payment_method") {
+    booking.paymentStatus = "failed";
     return;
   }
 
@@ -328,6 +337,43 @@ module.exports.completePayment = async (req, res, next) => {
       booking,
       paymentIntentStatus: paymentIntent.status,
     });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports.handleStripeWebhook = async (req, res, next) => {
+  try {
+    const stripe = getStripeClient();
+    const webhookSecret = getStripeWebhookSecret();
+
+    if (!webhookSecret) {
+      return res.status(500).send("STRIPE_WEBHOOK_SECRET is missing.");
+    }
+
+    const signature = req.headers["stripe-signature"];
+    let event;
+
+    try {
+      event = stripe.webhooks.constructEvent(req.body, signature, webhookSecret);
+    } catch (err) {
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    if (event.type.startsWith("payment_intent.")) {
+      const paymentIntent = event.data.object;
+      const bookingId = paymentIntent.metadata && paymentIntent.metadata.bookingId;
+
+      if (bookingId) {
+        const booking = await Booking.findById(bookingId);
+        if (booking) {
+          applyPaymentIntentToBooking(booking, paymentIntent, event.type);
+          await booking.save();
+        }
+      }
+    }
+
+    return res.json({ received: true });
   } catch (err) {
     next(err);
   }

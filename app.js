@@ -21,6 +21,7 @@ const User = require("./models/user.js");
 const listingRouter = require("./routes/listing.js");
 const listingBookingRouter = require("./routes/listingBooking.js");
 const bookingRouter = require("./routes/booking.js");
+const webhookRouter = require("./routes/webhook.js");
 const reviewRouter = require("./routes/review.js");
 const userRouter = require("./routes/user.js");
 const adminRouter = require("./routes/admin.js");
@@ -54,6 +55,7 @@ async function main() {
 
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
+app.use("/webhooks", webhookRouter);
 app.use(express.urlencoded({ extended: true }));
 app.use(methodOverride("_method"));
 app.engine("ejs", ejsMate);

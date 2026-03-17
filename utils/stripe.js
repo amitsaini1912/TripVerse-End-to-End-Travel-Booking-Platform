@@ -21,7 +21,12 @@ function getStripePublishableKey() {
   return process.env.STRIPE_PUBLISHABLE_KEY || "";
 }
 
+function getStripeWebhookSecret() {
+  return process.env.STRIPE_WEBHOOK_SECRET || "";
+}
+
 module.exports = {
   getStripeClient,
   getStripePublishableKey,
+  getStripeWebhookSecret,
 };
