@@ -27,10 +27,11 @@
             Stripe publishable key is missing. Add `STRIPE_PUBLISHABLE_KEY` and `STRIPE_SECRET_KEY` to enable payments.
           </div>
         <% } else { %>
-          <p class="text-muted">
-            This step prepares the Stripe PaymentIntent. Card form confirmation will be connected in the next payment step.
-          </p>
-          <button id="preparePaymentBtn" class="btn btn-dark">Prepare Payment Session</button>
+          <div id="checkoutLoader" class="alert alert-info">Preparing secure checkout...</div>
+          <form id="payment-form" style="display:none;">
+            <div id="payment-element" class="mb-3"></div>
+            <button id="submit-payment-btn" class="btn btn-dark" type="submit">Pay Now</button>
+          </form>
           <div id="paymentFeedback" class="mt-3"></div>
         <% } %>
       </div>
@@ -39,39 +40,86 @@
 </div>
 
 <% if (stripePublishableKey) { %>
+  <script src="https://js.stripe.com/v3/"></script>
   <script>
-    const preparePaymentBtn = document.getElementById("preparePaymentBtn");
+    const checkoutLoader = document.getElementById("checkoutLoader");
+    const paymentForm = document.getElementById("payment-form");
+    const paymentElementContainer = document.getElementById("payment-element");
+    const submitPaymentBtn = document.getElementById("submit-payment-btn");
     const paymentFeedback = document.getElementById("paymentFeedback");
+    const bookingId = "<%= booking._id %>";
+    const returnUrl = `${window.location.origin}/bookings/${bookingId}/pay/complete`;
 
-    if (preparePaymentBtn && paymentFeedback) {
-      preparePaymentBtn.addEventListener("click", async () => {
-        preparePaymentBtn.disabled = true;
-        preparePaymentBtn.innerText = "Preparing...";
-        paymentFeedback.innerHTML = "";
-
-        try {
-          const response = await fetch("/bookings/<%= booking._id %>/payment-intent", {
-            method: "POST",
-          });
-          const data = await response.json();
-
-          if (!response.ok) {
-            paymentFeedback.innerHTML = `<div class="alert alert-danger mb-0">${data.message || "Unable to prepare payment."}</div>`;
-          } else {
-            paymentFeedback.innerHTML = `
-              <div class="alert alert-success mb-0">
-                Payment session prepared successfully.<br>
-                Payment Intent ID: <b>${data.paymentIntentId}</b>
-              </div>
-            `;
-          }
-        } catch (err) {
-          paymentFeedback.innerHTML = '<div class="alert alert-danger mb-0">Unable to reach the payment service right now.</div>';
-        } finally {
-          preparePaymentBtn.disabled = false;
-          preparePaymentBtn.innerText = "Prepare Payment Session";
-        }
-      });
+    async function syncPaymentCompletion(paymentIntentId) {
+      const query = new URLSearchParams({ payment_intent: paymentIntentId });
+      window.location.href = `/bookings/${bookingId}/pay/complete?${query.toString()}`;
     }
+
+    async function initializeCheckout() {
+      if (!paymentForm || !paymentElementContainer || !paymentFeedback) return;
+
+      try {
+        const response = await fetch(`/bookings/${bookingId}/payment-intent`, {
+          method: "POST",
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+          if (checkoutLoader) checkoutLoader.style.display = "none";
+          paymentFeedback.innerHTML = `<div class="alert alert-danger mb-0">${data.message || "Unable to prepare payment."}</div>`;
+          return;
+        }
+
+        const stripe = Stripe(data.publishableKey);
+        const elements = stripe.elements({
+          clientSecret: data.clientSecret,
+          appearance: {
+            theme: "stripe",
+          },
+        });
+        const paymentElement = elements.create("payment");
+        paymentElement.mount("#payment-element");
+
+        if (checkoutLoader) checkoutLoader.style.display = "none";
+        paymentForm.style.display = "block";
+
+        paymentForm.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          paymentFeedback.innerHTML = "";
+          submitPaymentBtn.disabled = true;
+          submitPaymentBtn.innerText = "Processing...";
+
+          const { error } = await stripe.confirmPayment({
+            elements,
+            confirmParams: {
+              return_url: returnUrl,
+            },
+            redirect: "if_required",
+          });
+
+          if (error) {
+            paymentFeedback.innerHTML = `<div class="alert alert-danger mb-0">${error.message || "Payment could not be completed."}</div>`;
+            submitPaymentBtn.disabled = false;
+            submitPaymentBtn.innerText = "Pay Now";
+            return;
+          }
+
+          const { paymentIntent } = await stripe.retrievePaymentIntent(data.clientSecret);
+          if (!paymentIntent) {
+            paymentFeedback.innerHTML = '<div class="alert alert-danger mb-0">Unable to verify payment status.</div>';
+            submitPaymentBtn.disabled = false;
+            submitPaymentBtn.innerText = "Pay Now";
+            return;
+          }
+
+          await syncPaymentCompletion(paymentIntent.id);
+        });
+      } catch (err) {
+        if (checkoutLoader) checkoutLoader.style.display = "none";
+        paymentFeedback.innerHTML = '<div class="alert alert-danger mb-0">Unable to reach the payment service right now.</div>';
+      }
+    }
+
+    initializeCheckout();
   </script>
 <% } %>

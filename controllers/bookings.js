@@ -18,6 +18,30 @@ async function findOverlapBooking(listingId, checkIn, checkOut, extraQuery = {})
   });
 }
 
+function applyPaymentIntentToBooking(booking, paymentIntent) {
+  if (!paymentIntent) return;
+
+  booking.paymentIntentId = paymentIntent.id;
+
+  if (paymentIntent.status === "succeeded") {
+    booking.paymentStatus = "paid";
+    booking.paidAt = new Date();
+    return;
+  }
+
+  if (paymentIntent.status === "processing") {
+    booking.paymentStatus = "processing";
+    return;
+  }
+
+  if (paymentIntent.status === "canceled") {
+    booking.paymentStatus = "failed";
+    return;
+  }
+
+  booking.paymentStatus = "pending";
+}
+
 async function getBookingForGuestOrAdmin(bookingId, userId, userRole) {
   const booking = await Booking.findById(bookingId).populate("listing");
   if (!booking) {
@@ -184,6 +208,11 @@ module.exports.renderCheckoutPage = async (req, res, next) => {
       return res.redirect("/bookings/me");
     }
 
+    if (booking.paymentStatus === "paid") {
+      req.flash("success", "This booking is already paid.");
+      return res.redirect("/bookings/me");
+    }
+
     res.render("bookings/checkout.ejs", {
       booking,
       stripePublishableKey: getStripePublishableKey(),
@@ -222,6 +251,7 @@ module.exports.createPaymentIntent = async (req, res, next) => {
 
     if (booking.paymentIntentId) {
       paymentIntent = await stripe.paymentIntents.retrieve(booking.paymentIntentId);
+      applyPaymentIntentToBooking(booking, paymentIntent);
     }
 
     if (!paymentIntent || paymentIntent.status === "canceled") {
@@ -241,10 +271,10 @@ module.exports.createPaymentIntent = async (req, res, next) => {
         }
       );
 
-      booking.paymentIntentId = paymentIntent.id;
-      booking.paymentStatus = "pending";
-      await booking.save();
+      applyPaymentIntentToBooking(booking, paymentIntent);
     }
+
+    await booking.save();
 
     return res.json({
       clientSecret: paymentIntent.client_secret,
@@ -257,6 +287,49 @@ module.exports.createPaymentIntent = async (req, res, next) => {
   } catch (err) {
     const statusCode = err.statusCode || 500;
     return res.status(statusCode).json({ message: err.message || "Unable to create payment intent." });
+  }
+};
+
+module.exports.completePayment = async (req, res, next) => {
+  try {
+    const { booking, isAuthorized } = await getBookingForGuestOrAdmin(
+      req.params.bookingId,
+      req.user._id,
+      req.user.role
+    );
+
+    if (!booking) {
+      req.flash("error", "Booking not found.");
+      return res.redirect("/bookings/me");
+    }
+
+    if (!isAuthorized) {
+      req.flash("error", "You are not authorized to verify this payment.");
+      return res.redirect("/bookings/me");
+    }
+
+    const paymentIntentId = req.query.payment_intent || booking.paymentIntentId;
+    if (!paymentIntentId) {
+      req.flash("error", "Payment session not found for this booking.");
+      return res.redirect("/bookings/me");
+    }
+
+    if (booking.paymentIntentId && booking.paymentIntentId !== paymentIntentId) {
+      req.flash("error", "Payment verification failed because the payment session does not match the booking.");
+      return res.redirect("/bookings/me");
+    }
+
+    const stripe = getStripeClient();
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    applyPaymentIntentToBooking(booking, paymentIntent);
+    await booking.save();
+
+    return res.render("bookings/paymentResult.ejs", {
+      booking,
+      paymentIntentStatus: paymentIntent.status,
+    });
+  } catch (err) {
+    next(err);
   }
 };
 
@@ -414,6 +487,11 @@ module.exports.cancelBooking = async (req, res, next) => {
 
     if (booking.status === "cancelled" || booking.status === "rejected") {
       req.flash("error", "This booking can no longer be cancelled.");
+      return res.redirect("/bookings/me");
+    }
+
+    if (booking.paymentStatus === "paid") {
+      req.flash("error", "Paid bookings cannot be cancelled until refund handling is added.");
       return res.redirect("/bookings/me");
     }
 

@@ -1,0 +1,32 @@
+<% layout("./layouts/boilerplate.ejs") -%>
+
+<div class="row mt-3">
+  <div class="col-8 offset-2">
+    <div class="card">
+      <div class="card-body">
+        <h3 class="card-title mb-3">Payment Result</h3>
+
+        <p class="card-text mb-2"><b>Listing:</b> <%= booking.listing ? booking.listing.title : "Listing unavailable" %></p>
+        <p class="card-text mb-2"><b>Booking Status:</b> <%= booking.status %></p>
+        <p class="card-text mb-2"><b>Payment Intent Status:</b> <%= paymentIntentStatus %></p>
+        <p class="card-text mb-3"><b>Stored Payment Status:</b> <%= booking.paymentStatus %></p>
+
+        <% if (booking.paymentStatus === "paid") { %>
+          <div class="alert alert-success">
+            Payment completed successfully.
+          </div>
+        <% } else if (booking.paymentStatus === "processing") { %>
+          <div class="alert alert-warning">
+            Payment is still processing. Please check again shortly.
+          </div>
+        <% } else { %>
+          <div class="alert alert-danger">
+            Payment was not completed. You can try again from your bookings page.
+          </div>
+        <% } %>
+
+        <a href="/bookings/me" class="btn btn-dark">Back to My Bookings</a>
+      </div>
+    </div>
+  </div>
+</div>

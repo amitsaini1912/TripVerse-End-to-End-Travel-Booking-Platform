@@ -7,6 +7,7 @@ router.get("/me", isLoggedIn, bookingController.getMyBookings);
 router.get("/host", isLoggedIn, isHostOrAdmin, bookingController.getHostBookings);
 router.get("/host/dashboard", isLoggedIn, isHostOrAdmin, bookingController.getHostDashboard);
 router.get("/:bookingId/pay", isLoggedIn, bookingController.renderCheckoutPage);
+router.get("/:bookingId/pay/complete", isLoggedIn, bookingController.completePayment);
 router.post("/:bookingId/payment-intent", isLoggedIn, bookingController.createPaymentIntent);
 router.patch("/:bookingId/status", isLoggedIn, isHostOrAdmin, bookingController.updateBookingStatus);
 router.patch("/:bookingId/cancel", isLoggedIn, bookingController.cancelBooking);
