@@ -1,4 +1,4 @@
-# 🏨 Wanderlust – Airbnb Clone (MERN Stack)
+# 🏨 TripVerse – End to End Hotel Booking Web App
 
 **Wanderlust** is a full-stack hotel booking web application inspired by Airbnb. Built using the **MERN** stack (MongoDB, Express.js, Node.js), this project uses **EJS** for server-side rendering (no React) to deliver a seamless booking and property listing experience.
 
