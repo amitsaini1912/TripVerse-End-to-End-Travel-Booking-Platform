@@ -30,25 +30,58 @@ function applyPaymentIntentToBooking(booking, paymentIntent, eventType = "") {
   if (paymentIntent.status === "succeeded") {
     booking.paymentStatus = "paid";
     booking.paidAt = booking.paidAt || new Date();
+    booking.lastPaymentErrorMessage = "";
     return;
   }
 
   if (paymentIntent.status === "processing") {
     booking.paymentStatus = "processing";
+    booking.lastPaymentErrorMessage = "";
     return;
   }
 
   if (eventType === "payment_intent.payment_failed" || paymentIntent.status === "requires_payment_method") {
     booking.paymentStatus = "failed";
+    booking.lastPaymentErrorMessage =
+      (paymentIntent.last_payment_error && paymentIntent.last_payment_error.message) ||
+      "The payment attempt failed. Please try again.";
     return;
   }
 
   if (paymentIntent.status === "canceled") {
     booking.paymentStatus = "failed";
+    booking.lastPaymentErrorMessage = "The payment session was cancelled. You can try again.";
     return;
   }
 
   booking.paymentStatus = "pending";
+  booking.lastPaymentErrorMessage = "";
+}
+
+async function cancelPaymentIntentIfPossible(booking) {
+  if (!booking.paymentIntentId || booking.paymentStatus === "paid" || booking.paymentStatus === "refunded") {
+    return;
+  }
+
+  try {
+    const stripe = getStripeClient();
+    const paymentIntent = await stripe.paymentIntents.retrieve(booking.paymentIntentId);
+
+    if (paymentIntent.status === "canceled" || paymentIntent.status === "succeeded") {
+      applyPaymentIntentToBooking(booking, paymentIntent);
+      return;
+    }
+
+    const cancelledIntent = await stripe.paymentIntents.cancel(booking.paymentIntentId);
+    applyPaymentIntentToBooking(booking, cancelledIntent);
+  } catch (err) {
+    if (err && err.type === "StripeInvalidRequestError") {
+      booking.lastPaymentErrorMessage = "Booking was cancelled, but the payment session could not be closed automatically.";
+      return;
+    }
+
+    throw err;
+  }
 }
 
 async function getBookingForGuestOrAdmin(bookingId, userId, userRole) {
@@ -548,6 +581,8 @@ module.exports.cancelBooking = async (req, res, next) => {
       req.flash("error", "Bookings can only be cancelled before the check-in date.");
       return res.redirect("/bookings/me");
     }
+
+    await cancelPaymentIntentIfPossible(booking);
 
     booking.status = "cancelled";
     await booking.save();

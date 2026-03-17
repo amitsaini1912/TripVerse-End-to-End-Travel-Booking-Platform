@@ -10,6 +10,9 @@
         <p class="card-text mb-2"><b>Booking Status:</b> <%= booking.status %></p>
         <p class="card-text mb-2"><b>Payment Intent Status:</b> <%= paymentIntentStatus %></p>
         <p class="card-text mb-3"><b>Stored Payment Status:</b> <%= booking.paymentStatus %></p>
+        <% if (booking.lastPaymentErrorMessage) { %>
+          <p class="card-text text-danger"><b>Payment Issue:</b> <%= booking.lastPaymentErrorMessage %></p>
+        <% } %>
 
         <% if (booking.paymentStatus === "paid") { %>
           <div class="alert alert-success">
@@ -23,6 +26,7 @@
           <div class="alert alert-danger">
             Payment was not completed. You can try again from your bookings page.
           </div>
+          <a href="/bookings/<%= booking._id %>/pay" class="btn btn-outline-dark me-2">Retry Payment</a>
         <% } %>
 
         <a href="/bookings/me" class="btn btn-dark">Back to My Bookings</a>

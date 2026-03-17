@@ -21,12 +21,22 @@
         <p class="card-text mb-1"><b>Guests:</b> <%= booking.guests %></p>
         <p class="card-text mb-1"><b>Total:</b> INR <%= booking.totalAmount.toLocaleString("en-IN") %></p>
         <p class="card-text mb-3"><b>Payment Status:</b> <%= booking.paymentStatus %></p>
+        <% if (booking.lastPaymentErrorMessage) { %>
+          <div class="alert alert-danger">
+            <b>Last payment issue:</b> <%= booking.lastPaymentErrorMessage %>
+          </div>
+        <% } %>
 
         <% if (!stripePublishableKey) { %>
           <div class="alert alert-warning mb-0">
             Stripe publishable key is missing. Add `STRIPE_PUBLISHABLE_KEY` and `STRIPE_SECRET_KEY` to enable payments.
           </div>
         <% } else { %>
+          <% if (booking.paymentStatus === "failed") { %>
+            <div class="alert alert-warning">
+              Your previous payment did not complete. You can try again below.
+            </div>
+          <% } %>
           <div id="checkoutLoader" class="alert alert-info">Preparing secure checkout...</div>
           <form id="payment-form" style="display:none;">
             <div id="payment-element" class="mb-3"></div>

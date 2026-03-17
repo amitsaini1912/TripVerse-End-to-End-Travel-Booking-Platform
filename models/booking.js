@@ -63,6 +63,11 @@ const bookingSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    lastPaymentErrorMessage: {
+      type: String,
+      default: "",
+      trim: true,
+    },
     paidAt: {
       type: Date,
       default: null,

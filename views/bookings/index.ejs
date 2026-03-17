@@ -42,6 +42,11 @@
                     <%= booking.paymentStatus %>
                   </span>
                 </p>
+                <% if (booking.lastPaymentErrorMessage) { %>
+                  <p class="card-text text-danger mb-1">
+                    <b>Payment Issue:</b> <%= booking.lastPaymentErrorMessage %>
+                  </p>
+                <% } %>
                 <p class="card-text mb-2">
                   <b>Status:</b>
                   <span class="badge text-bg-<%= booking.status === 'confirmed' ? 'success' : (booking.status === 'pending' ? 'warning' : 'secondary') %>">
@@ -55,7 +60,9 @@
                   <% } %>
 
                   <% if (booking.status === "confirmed" && booking.paymentStatus !== "paid") { %>
-                    <a href="/bookings/<%= booking._id %>/pay" class="btn btn-dark btn-sm">Proceed to Payment</a>
+                    <a href="/bookings/<%= booking._id %>/pay" class="btn btn-dark btn-sm">
+                      <%= booking.paymentStatus === "failed" ? "Retry Payment" : "Proceed to Payment" %>
+                    </a>
                   <% } %>
 
                   <% if (booking.status === "pending" || booking.status === "confirmed") { %>
