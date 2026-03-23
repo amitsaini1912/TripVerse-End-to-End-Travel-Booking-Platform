@@ -143,3 +143,78 @@ module.exports.updateUserRole = async (req, res, next) => {
     next(err);
   }
 };
+
+module.exports.renderListingsManagement = async (req, res, next) => {
+  try {
+    const [listings, bookingStats] = await Promise.all([
+      Listing.find({})
+        .populate("owner", "username email")
+        .sort({ _id: -1 }),
+      Booking.aggregate([
+        {
+          $group: {
+            _id: "$listing",
+            totalBookings: { $sum: 1 },
+            activeBookings: {
+              $sum: {
+                $cond: [{ $in: ["$status", ["pending", "confirmed"]] }, 1, 0],
+              },
+            },
+            paidBookings: {
+              $sum: {
+                $cond: [{ $eq: ["$paymentStatus", "paid"] }, 1, 0],
+              },
+            },
+          },
+        },
+      ]),
+    ]);
+
+    const bookingStatsMap = new Map(
+      bookingStats.map((item) => [
+        String(item._id),
+        {
+          totalBookings: item.totalBookings || 0,
+          activeBookings: item.activeBookings || 0,
+          paidBookings: item.paidBookings || 0,
+        },
+      ])
+    );
+
+    const listingsWithStats = listings.map((listing) => {
+      const stats = bookingStatsMap.get(String(listing._id)) || {
+        totalBookings: 0,
+        activeBookings: 0,
+        paidBookings: 0,
+      };
+
+      return {
+        listing,
+        stats,
+      };
+    });
+
+    res.render("admin/listings.ejs", { listingsWithStats });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports.deleteListing = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const listing = await Listing.findById(id);
+
+    if (!listing) {
+      req.flash("error", "Listing not found.");
+      return res.redirect("/admin/listings");
+    }
+
+    await Listing.findByIdAndDelete(id);
+
+    req.flash("success", `Listing "${listing.title}" was deleted.`);
+    res.redirect("/admin/listings");
+  } catch (err) {
+    next(err);
+  }
+};
