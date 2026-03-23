@@ -7,6 +7,7 @@ router
       .route("/")
       .get(isLoggedIn, isAdmin, adminController.renderDashboard);
 
+router.get("/bookings", isLoggedIn, isAdmin, adminController.renderBookingsManagement);
 router.get("/listings", isLoggedIn, isAdmin, adminController.renderListingsManagement);
 router.patch("/users/:id/approve-host", isLoggedIn, isAdmin, adminController.approveHostRequest);
 router.patch("/users/:id/reject-host", isLoggedIn, isAdmin, adminController.rejectHostRequest);

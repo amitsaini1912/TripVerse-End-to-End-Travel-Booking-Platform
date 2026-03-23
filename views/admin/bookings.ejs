@@ -1,0 +1,182 @@
+<% layout("./layouts/boilerplate.ejs") -%>
+
+<div class="row mt-3">
+  <div class="col-10 offset-1">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div>
+        <h3 class="mb-1">Admin Bookings</h3>
+        <p class="text-muted mb-0">Monitor booking activity, payment health, and step in when moderation is needed.</p>
+      </div>
+      <div class="d-flex gap-2">
+        <a href="/admin/listings" class="btn btn-outline-dark">Manage Listings</a>
+        <a href="/admin" class="btn btn-outline-secondary">Back to Admin Panel</a>
+      </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+      <div class="col-md-2">
+        <div class="card text-center h-100">
+          <div class="card-body">
+            <h6 class="card-title">Total</h6>
+            <h4><%= stats.totalBookings %></h4>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-2">
+        <div class="card text-center h-100">
+          <div class="card-body">
+            <h6 class="card-title">Pending</h6>
+            <h4><%= stats.pendingBookings %></h4>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-2">
+        <div class="card text-center h-100">
+          <div class="card-body">
+            <h6 class="card-title">Confirmed</h6>
+            <h4><%= stats.confirmedBookings %></h4>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-2">
+        <div class="card text-center h-100">
+          <div class="card-body">
+            <h6 class="card-title">Closed</h6>
+            <h4><%= stats.cancelledBookings %></h4>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-2">
+        <div class="card text-center h-100">
+          <div class="card-body">
+            <h6 class="card-title">Paid</h6>
+            <h4><%= stats.paidBookings %></h4>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-2">
+        <div class="card text-center h-100">
+          <div class="card-body">
+            <h6 class="card-title">Failed Pay</h6>
+            <h4><%= stats.failedPayments %></h4>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <form method="GET" action="/admin/bookings" class="row g-3 align-items-end mb-4">
+      <div class="col-md-4">
+        <label class="form-label" for="statusFilter">Booking Status</label>
+        <select class="form-select" id="statusFilter" name="status">
+          <option value="">All</option>
+          <option value="pending" <%= filters.status === "pending" ? "selected" : "" %>>Pending</option>
+          <option value="confirmed" <%= filters.status === "confirmed" ? "selected" : "" %>>Confirmed</option>
+          <option value="rejected" <%= filters.status === "rejected" ? "selected" : "" %>>Rejected</option>
+          <option value="cancelled" <%= filters.status === "cancelled" ? "selected" : "" %>>Cancelled</option>
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label" for="paymentStatusFilter">Payment Status</label>
+        <select class="form-select" id="paymentStatusFilter" name="paymentStatus">
+          <option value="">All</option>
+          <option value="pending" <%= filters.paymentStatus === "pending" ? "selected" : "" %>>Pending</option>
+          <option value="processing" <%= filters.paymentStatus === "processing" ? "selected" : "" %>>Processing</option>
+          <option value="paid" <%= filters.paymentStatus === "paid" ? "selected" : "" %>>Paid</option>
+          <option value="failed" <%= filters.paymentStatus === "failed" ? "selected" : "" %>>Failed</option>
+          <option value="refunded" <%= filters.paymentStatus === "refunded" ? "selected" : "" %>>Refunded</option>
+        </select>
+      </div>
+      <div class="col-md-4 d-flex gap-2">
+        <button class="btn btn-dark" type="submit">Apply Filters</button>
+        <a href="/admin/bookings" class="btn btn-outline-secondary">Reset</a>
+      </div>
+    </form>
+
+    <% if (bookings.length === 0) { %>
+      <div class="alert alert-info">No bookings match the current filters.</div>
+    <% } else { %>
+      <div class="table-responsive">
+        <table class="table table-bordered align-middle">
+          <thead>
+            <tr>
+              <th>Listing</th>
+              <th>Guest</th>
+              <th>Host</th>
+              <th>Stay</th>
+              <th>Amount</th>
+              <th>Booking</th>
+              <th>Payment</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% for (const booking of bookings) { %>
+              <tr>
+                <td>
+                  <div><b><%= booking.listing ? booking.listing.title : "Listing unavailable" %></b></div>
+                  <div class="text-muted small">
+                    <%= booking.listing ? `${booking.listing.location}, ${booking.listing.country}` : "" %>
+                  </div>
+                </td>
+                <td>
+                  <div><%= booking.guest ? booking.guest.username : "Guest unavailable" %></div>
+                  <div class="text-muted small"><%= booking.guest ? booking.guest.email : "" %></div>
+                </td>
+                <td>
+                  <div><%= booking.host ? booking.host.username : "Host unavailable" %></div>
+                  <div class="text-muted small"><%= booking.host ? booking.host.email : "" %></div>
+                </td>
+                <td>
+                  <div><b>In:</b> <%= booking.checkIn.toDateString() %></div>
+                  <div><b>Out:</b> <%= booking.checkOut.toDateString() %></div>
+                  <div class="small text-muted"><%= booking.guests %> guest(s)</div>
+                </td>
+                <td>INR <%= booking.totalAmount.toLocaleString("en-IN") %></td>
+                <td>
+                  <span class="badge text-bg-<%= booking.status === "confirmed" ? "success" : (booking.status === "pending" ? "warning" : "secondary") %>">
+                    <%= booking.status %>
+                  </span>
+                </td>
+                <td>
+                  <span class="badge text-bg-<%= booking.paymentStatus === "paid" ? "success" : (booking.paymentStatus === "failed" ? "danger" : "warning") %>">
+                    <%= booking.paymentStatus %>
+                  </span>
+                  <% if (booking.lastPaymentErrorMessage) { %>
+                    <div class="small text-danger mt-1"><%= booking.lastPaymentErrorMessage %></div>
+                  <% } %>
+                </td>
+                <td>
+                  <div class="d-flex flex-wrap gap-2">
+                    <% if (booking.listing) { %>
+                      <a href="/listings/<%= booking.listing._id %>" class="btn btn-outline-dark btn-sm">View</a>
+                    <% } %>
+
+                    <% if (booking.status === "pending") { %>
+                      <form method="POST" action="/bookings/<%= booking._id %>/status?_method=PATCH">
+                        <input type="hidden" name="status" value="confirmed">
+                        <input type="hidden" name="redirectTo" value="<%= redirectTo %>">
+                        <button class="btn btn-outline-success btn-sm">Approve</button>
+                      </form>
+                      <form method="POST" action="/bookings/<%= booking._id %>/status?_method=PATCH">
+                        <input type="hidden" name="status" value="rejected">
+                        <input type="hidden" name="redirectTo" value="<%= redirectTo %>">
+                        <button class="btn btn-outline-danger btn-sm">Reject</button>
+                      </form>
+                    <% } %>
+
+                    <% if ((booking.status === "pending" || booking.status === "confirmed") && booking.paymentStatus !== "paid") { %>
+                      <form method="POST" action="/bookings/<%= booking._id %>/cancel?_method=PATCH">
+                        <input type="hidden" name="redirectTo" value="<%= redirectTo %>">
+                        <button class="btn btn-outline-secondary btn-sm">Cancel</button>
+                      </form>
+                    <% } %>
+                  </div>
+                </td>
+              </tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </div>
+</div>

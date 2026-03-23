@@ -200,6 +200,63 @@ module.exports.renderListingsManagement = async (req, res, next) => {
   }
 };
 
+module.exports.renderBookingsManagement = async (req, res, next) => {
+  try {
+    const status = req.query.status || "";
+    const paymentStatus = req.query.paymentStatus || "";
+    const filters = {};
+
+    if (status) {
+      filters.status = status;
+    }
+
+    if (paymentStatus) {
+      filters.paymentStatus = paymentStatus;
+    }
+
+    const [
+      bookings,
+      totalBookings,
+      pendingBookings,
+      confirmedBookings,
+      cancelledBookings,
+      paidBookings,
+      failedPayments,
+    ] = await Promise.all([
+      Booking.find(filters)
+        .populate("listing", "title location country")
+        .populate("guest", "username email")
+        .populate("host", "username email")
+        .sort({ createdAt: -1 }),
+      Booking.countDocuments(),
+      Booking.countDocuments({ status: "pending" }),
+      Booking.countDocuments({ status: "confirmed" }),
+      Booking.countDocuments({ status: { $in: ["cancelled", "rejected"] } }),
+      Booking.countDocuments({ paymentStatus: "paid" }),
+      Booking.countDocuments({ paymentStatus: "failed" }),
+    ]);
+
+    res.render("admin/bookings.ejs", {
+      bookings,
+      filters: {
+        status,
+        paymentStatus,
+      },
+      stats: {
+        totalBookings,
+        pendingBookings,
+        confirmedBookings,
+        cancelledBookings,
+        paidBookings,
+        failedPayments,
+      },
+      redirectTo: req.originalUrl,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports.deleteListing = async (req, res, next) => {
   try {
     const { id } = req.params;

@@ -95,6 +95,20 @@ async function getBookingForGuestOrAdmin(bookingId, userId, userRole) {
   return { booking, isAuthorized: isAdmin || isGuest };
 }
 
+function getSafeRedirectPath(req, fallbackPath) {
+  const redirectTo = (req.body && req.body.redirectTo) || req.query.redirectTo;
+
+  if (
+    typeof redirectTo === "string" &&
+    redirectTo.startsWith("/") &&
+    !redirectTo.startsWith("//")
+  ) {
+    return redirectTo;
+  }
+
+  return fallbackPath;
+}
+
 module.exports.createBooking = async (req, res, next) => {
   try {
     const { id: listingId } = req.params;
@@ -499,28 +513,29 @@ module.exports.updateBookingStatus = async (req, res, next) => {
     const { bookingId } = req.params;
     const { status } = req.body;
     const allowedStatuses = ["confirmed", "rejected"];
+    const redirectPath = getSafeRedirectPath(req, "/bookings/host");
 
     if (!allowedStatuses.includes(status)) {
       req.flash("error", "Invalid booking status update request.");
-      return res.redirect("/bookings/host");
+      return res.redirect(redirectPath);
     }
 
     const booking = await Booking.findById(bookingId);
     if (!booking) {
       req.flash("error", "Booking not found.");
-      return res.redirect("/bookings/host");
+      return res.redirect(redirectPath);
     }
 
     const isAdmin = req.user.role === "admin";
     const isHost = booking.host.equals(req.user._id);
     if (!isAdmin && !isHost) {
       req.flash("error", "You are not authorized to update this booking.");
-      return res.redirect("/bookings/host");
+      return res.redirect(redirectPath);
     }
 
     if (booking.status !== "pending") {
       req.flash("error", "Only pending bookings can be updated.");
-      return res.redirect("/bookings/host");
+      return res.redirect(redirectPath);
     }
 
     if (status === "confirmed") {
@@ -533,7 +548,7 @@ module.exports.updateBookingStatus = async (req, res, next) => {
 
       if (conflictingConfirmedBooking) {
         req.flash("error", "Cannot confirm due to date conflict with another confirmed booking.");
-        return res.redirect("/bookings/host");
+        return res.redirect(redirectPath);
       }
     }
 
@@ -541,7 +556,7 @@ module.exports.updateBookingStatus = async (req, res, next) => {
     await booking.save();
 
     req.flash("success", `Booking ${status} successfully.`);
-    return res.redirect("/bookings/host");
+    return res.redirect(redirectPath);
   } catch (err) {
     next(err);
   }
@@ -550,28 +565,29 @@ module.exports.updateBookingStatus = async (req, res, next) => {
 module.exports.cancelBooking = async (req, res, next) => {
   try {
     const { bookingId } = req.params;
+    const redirectPath = getSafeRedirectPath(req, "/bookings/me");
     const booking = await Booking.findById(bookingId);
 
     if (!booking) {
       req.flash("error", "Booking not found.");
-      return res.redirect("/bookings/me");
+      return res.redirect(redirectPath);
     }
 
     const isAdmin = req.user.role === "admin";
     const isGuest = booking.guest.equals(req.user._id);
     if (!isAdmin && !isGuest) {
       req.flash("error", "You are not authorized to cancel this booking.");
-      return res.redirect("/bookings/me");
+      return res.redirect(redirectPath);
     }
 
     if (booking.status === "cancelled" || booking.status === "rejected") {
       req.flash("error", "This booking can no longer be cancelled.");
-      return res.redirect("/bookings/me");
+      return res.redirect(redirectPath);
     }
 
     if (booking.paymentStatus === "paid") {
       req.flash("error", "Paid bookings cannot be cancelled until refund handling is added.");
-      return res.redirect("/bookings/me");
+      return res.redirect(redirectPath);
     }
 
     // Prevent cancellation once the booking has started
@@ -579,7 +595,7 @@ module.exports.cancelBooking = async (req, res, next) => {
     const bookingStart = normalizeToStartOfDay(booking.checkIn);
     if (today >= bookingStart) {
       req.flash("error", "Bookings can only be cancelled before the check-in date.");
-      return res.redirect("/bookings/me");
+      return res.redirect(redirectPath);
     }
 
     await cancelPaymentIntentIfPossible(booking);
@@ -588,7 +604,7 @@ module.exports.cancelBooking = async (req, res, next) => {
     await booking.save();
 
     req.flash("success", "Booking cancelled successfully.");
-    return res.redirect("/bookings/me");
+    return res.redirect(redirectPath);
   } catch (err) {
     next(err);
   }
