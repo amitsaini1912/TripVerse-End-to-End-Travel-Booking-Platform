@@ -9,5 +9,6 @@ router
 
 router.patch("/users/:id/approve-host", isLoggedIn, isAdmin, adminController.approveHostRequest);
 router.patch("/users/:id/reject-host", isLoggedIn, isAdmin, adminController.rejectHostRequest);
+router.patch("/users/:id/role", isLoggedIn, isAdmin, adminController.updateUserRole);
 
 module.exports = router;

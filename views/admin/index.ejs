@@ -5,7 +5,7 @@
     <h3>Admin Panel</h3>
 
     <div class="row g-3 mt-1 mb-4">
-      <div class="col-md-4">
+      <div class="col-md-3">
         <div class="card text-center h-100">
           <div class="card-body">
             <h6 class="card-title">Users</h6>
@@ -13,7 +13,15 @@
           </div>
         </div>
       </div>
-      <div class="col-md-4">
+      <div class="col-md-3">
+        <div class="card text-center h-100">
+          <div class="card-body">
+            <h6 class="card-title">Hosts</h6>
+            <h4><%= stats.hosts %></h4>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
         <div class="card text-center h-100">
           <div class="card-body">
             <h6 class="card-title">Listings</h6>
@@ -21,11 +29,59 @@
           </div>
         </div>
       </div>
-      <div class="col-md-4">
+      <div class="col-md-3">
         <div class="card text-center h-100">
           <div class="card-body">
             <h6 class="card-title">Reviews</h6>
             <h4><%= stats.reviews %></h4>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center h-100">
+          <div class="card-body">
+            <h6 class="card-title">Bookings</h6>
+            <h4><%= stats.bookings %></h4>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center h-100">
+          <div class="card-body">
+            <h6 class="card-title">Confirmed</h6>
+            <h4><%= stats.confirmedBookings %></h4>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center h-100">
+          <div class="card-body">
+            <h6 class="card-title">Pending Payments</h6>
+            <h4><%= stats.pendingPayments %></h4>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center h-100">
+          <div class="card-body">
+            <h6 class="card-title">Paid Revenue</h6>
+            <h4>INR <%= stats.revenue.toLocaleString("en-IN") %></h4>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center h-100 border-warning">
+          <div class="card-body">
+            <h6 class="card-title">Pending Host Requests</h6>
+            <h4><%= stats.pendingHostRequests %></h4>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card text-center h-100 border-success">
+          <div class="card-body">
+            <h6 class="card-title">Paid Bookings</h6>
+            <h4><%= stats.paidBookings %></h4>
           </div>
         </div>
       </div>
@@ -69,6 +125,7 @@
             <th>Email</th>
             <th>Role</th>
             <th>Host Request</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -76,12 +133,73 @@
             <tr>
               <td><%= user.username %></td>
               <td><%= user.email %></td>
-              <td><%= user.role %></td>
+              <td>
+                <span class="badge text-bg-<%= user.role === 'admin' ? 'dark' : (user.role === 'host' ? 'success' : 'secondary') %>">
+                  <%= user.role %>
+                </span>
+              </td>
               <td><%= user.hostRequestStatus %></td>
+              <td>
+                <% if (user.role === "user") { %>
+                  <form method="POST" action="/admin/users/<%= user._id %>/role?_method=PATCH" class="d-inline">
+                    <input type="hidden" name="role" value="host">
+                    <button class="btn btn-sm btn-outline-success">Make Host</button>
+                  </form>
+                <% } else if (user.role === "host") { %>
+                  <form method="POST" action="/admin/users/<%= user._id %>/role?_method=PATCH" class="d-inline">
+                    <input type="hidden" name="role" value="user">
+                    <button class="btn btn-sm btn-outline-secondary">Make User</button>
+                  </form>
+                <% } else { %>
+                  <span class="badge text-bg-dark">Protected</span>
+                <% } %>
+              </td>
             </tr>
           <% } %>
         </tbody>
       </table>
     </div>
+
+    <h4 class="mt-4 mb-3">Recent Bookings</h4>
+    <% if (recentBookings.length === 0) { %>
+      <div class="alert alert-info">No bookings have been created yet.</div>
+    <% } else { %>
+      <div class="table-responsive">
+        <table class="table table-bordered align-middle">
+          <thead>
+            <tr>
+              <th>Listing</th>
+              <th>Guest</th>
+              <th>Host</th>
+              <th>Booking</th>
+              <th>Payment</th>
+              <th>Amount</th>
+              <th>Created</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% for (const booking of recentBookings) { %>
+              <tr>
+                <td><%= booking.listing ? booking.listing.title : "Listing unavailable" %></td>
+                <td><%= booking.guest ? booking.guest.username : "User unavailable" %></td>
+                <td><%= booking.host ? booking.host.username : "Host unavailable" %></td>
+                <td>
+                  <span class="badge text-bg-<%= booking.status === 'confirmed' ? 'success' : (booking.status === 'pending' ? 'warning' : 'secondary') %>">
+                    <%= booking.status %>
+                  </span>
+                </td>
+                <td>
+                  <span class="badge text-bg-<%= booking.paymentStatus === 'paid' ? 'success' : (booking.paymentStatus === 'failed' ? 'danger' : 'warning') %>">
+                    <%= booking.paymentStatus %>
+                  </span>
+                </td>
+                <td>INR <%= booking.totalAmount.toLocaleString("en-IN") %></td>
+                <td><%= booking.createdAt.toDateString() %></td>
+              </tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
   </div>
 </div>
