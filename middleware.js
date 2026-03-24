@@ -3,20 +3,34 @@ const ExpressError = require("./utils/ExpressError.js");
 const { listingSchema, reviewSchema, bookingSchema, hostRequestSchema } = require("./schema.js");
 const Review = require("./models/review.js");
 
+function saveReturnTo(req) {
+  const isSafeGetRequest =
+    req.method === "GET" &&
+    typeof req.originalUrl === "string" &&
+    req.originalUrl.startsWith("/") &&
+    !req.originalUrl.startsWith("//") &&
+    !req.originalUrl.startsWith("/login") &&
+    !req.originalUrl.startsWith("/signup") &&
+    !req.originalUrl.startsWith("/logout");
+
+  if (isSafeGetRequest) {
+    req.session.returnTo = req.originalUrl;
+  }
+}
+
 module.exports.isLoggedIn = (req, res, next) => {
-    // console.log(req.path, ".." , req.originalUrl);
     if(!req.isAuthenticated()){
-        //redirectUrl save
-        // req.session.redirectUrl = req.originalUrl;
+        saveReturnTo(req);
         req.flash("error", "You must logged in before make change!");
         return res.redirect("/login");
-    };
+    }
     next();
 };
 
 module.exports.hasRole = (...allowedRoles) => {
   return (req, res, next) => {
     if (!req.isAuthenticated()) {
+      saveReturnTo(req);
       req.flash("error", "You must logged in before make change!");
       return res.redirect("/login");
     }

@@ -1,5 +1,29 @@
 const User = require("../models/user.js");
 
+function getSafeRedirectPath(path, fallback = "/listings") {
+    if (typeof path === "string" && path.startsWith("/") && !path.startsWith("//")) {
+        return path;
+    }
+    return fallback;
+}
+
+function completeAuthenticatedSession(req, res, next, user, successMessage, redirectPath = "/listings") {
+    req.session.regenerate((err) => {
+        if (err) {
+            return next(err);
+        }
+
+        req.login(user, (loginErr) => {
+            if (loginErr) {
+                return next(loginErr);
+            }
+
+            req.flash("success", successMessage);
+            res.redirect(redirectPath);
+        });
+    });
+}
+
 module.exports.renderSignUpForm =  (req, res) => {
     res.render("users/signUp.ejs");
 };
@@ -9,15 +33,15 @@ module.exports.signUp = async(req,res,next) =>{
         let { username, email, password } = req.body;
         const newUser = new User({email, username});
         const registeredUser = await User.register(newUser, password);
-        console.log(registeredUser);
-        //Auto login after sign up passport method
-        req.login( registeredUser, (err) => {
-            if(err){
-                return next(err);
-            }
-            req.flash("success", "Wellcome to WanderLust");
-            res.redirect("/listings");
-        });
+        const redirectPath = getSafeRedirectPath(req.session.returnTo, "/listings");
+        completeAuthenticatedSession(
+            req,
+            res,
+            next,
+            registeredUser,
+            "Wellcome to WanderLust",
+            redirectPath
+        );
     }catch(err){
         req.flash("error" , err.message);
         res.redirect("/signup");
@@ -28,20 +52,32 @@ module.exports.renderLoginForm =  (req, res) => {
     res.render("users/login.ejs");
 };
 
-module.exports.login = async(req, res) => {
-    req.flash("success", "Wellcome Back to wandelust");
-    //let redirectUrl = req.locals.redirectUrl || "/listings";
-    res.redirect("/listings");
+module.exports.login = async(req, res, next) => {
+    const redirectPath = getSafeRedirectPath(req.session.returnTo, "/listings");
+    completeAuthenticatedSession(
+        req,
+        res,
+        next,
+        req.user,
+        "Wellcome Back to wandelust",
+        redirectPath
+    );
 };
 
 module.exports.logOut = (req, res, next) => {
-    //this is also a passport method
     req.logout((err) => {
         if(err){
             return next(err);
         }
-        req.flash("success", "Logout successfully");
-        res.redirect("/listings");
+
+        req.session.regenerate((sessionErr) => {
+            if (sessionErr) {
+                return next(sessionErr);
+            }
+
+            req.flash("success", "Logout successfully");
+            res.redirect("/listings");
+        });
     });
 };
 
