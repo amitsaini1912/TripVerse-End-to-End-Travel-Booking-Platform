@@ -3,13 +3,16 @@
   const safeListings = typeof allListings !== "undefined" && Array.isArray(allListings) ? allListings : [];
   const safeFilters = typeof listingFilters !== "undefined" && listingFilters
     ? listingFilters
-    : { q: "", country: "", minPrice: "", maxPrice: "", sort: "latest" };
+    : { q: "", country: "", checkIn: "", checkOut: "", minPrice: "", maxPrice: "", sort: "latest" };
   const safeResultsCount = typeof resultsCount !== "undefined" ? resultsCount : safeListings.length;
+  const safeAvailabilityError = typeof availabilityError !== "undefined" ? availabilityError : "";
   const safeHasActiveFilters = typeof hasActiveFilters !== "undefined"
     ? hasActiveFilters
     : Boolean(
         safeFilters.q ||
         safeFilters.country ||
+        safeFilters.checkIn ||
+        safeFilters.checkOut ||
         safeFilters.minPrice !== "" ||
         safeFilters.maxPrice !== "" ||
         safeFilters.sort !== "latest"
@@ -88,6 +91,29 @@
 
         <div class="row">
           <div class="col-6 mb-3">
+            <label for="checkInFilter" class="form-label">Check-In</label>
+            <input
+              id="checkInFilter"
+              name="checkIn"
+              class="form-control"
+              type="date"
+              value="<%= safeFilters.checkIn %>"
+            >
+          </div>
+          <div class="col-6 mb-3">
+            <label for="checkOutFilter" class="form-label">Check-Out</label>
+            <input
+              id="checkOutFilter"
+              name="checkOut"
+              class="form-control"
+              type="date"
+              value="<%= safeFilters.checkOut %>"
+            >
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-6 mb-3">
             <label for="minPriceFilter" class="form-label">Min Price</label>
             <input
               id="minPriceFilter"
@@ -147,12 +173,23 @@
               for "<%= safeFilters.q %>"
             <% } %>
           </p>
+          <% if (safeFilters.checkIn && safeFilters.checkOut) { %>
+            <p class="text-muted mb-0">
+              Showing stays available from <b><%= safeFilters.checkIn %></b> to <b><%= safeFilters.checkOut %></b>
+            </p>
+          <% } %>
         </div>
         <% if (safeHasActiveFilters) { %>
           <span class="badge text-bg-dark">Filtered Results</span>
         <% } %>
       </div>
     </div>
+
+    <% if (safeAvailabilityError) { %>
+      <div class="alert alert-warning">
+        <%= safeAvailabilityError %>
+      </div>
+    <% } %>
 
     <% if (safeListings.length === 0) { %>
       <div class="alert alert-info">
@@ -193,6 +230,31 @@
 </div>
 
 <script>
+  const checkInFilter = document.getElementById("checkInFilter");
+  const checkOutFilter = document.getElementById("checkOutFilter");
+  const today = new Date().toISOString().split("T")[0];
+
+  if (checkInFilter) {
+    checkInFilter.min = today;
+  }
+
+  if (checkOutFilter) {
+    checkOutFilter.min = today;
+  }
+
+  if (checkInFilter && checkOutFilter) {
+    const syncCheckOutMin = () => {
+      const nextMin = checkInFilter.value || today;
+      checkOutFilter.min = nextMin;
+      if (checkOutFilter.value && checkOutFilter.value <= nextMin) {
+        checkOutFilter.value = "";
+      }
+    };
+
+    syncCheckOutMin();
+    checkInFilter.addEventListener("change", syncCheckOutMin);
+  }
+
   let taxSwitch = document.getElementById("flexSwitchCheckDefault");
   if (taxSwitch) {
     taxSwitch.addEventListener("click", () => {

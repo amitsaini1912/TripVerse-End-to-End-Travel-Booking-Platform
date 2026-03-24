@@ -1,4 +1,5 @@
 const Listing = require("../models/listing.js");
+const Booking = require("../models/booking.js");
 const mbxGeocoding = require('@mapbox/mapbox-sdk/services/geocoding');
 const mapToken = process.env.MAP_TOKEN;
 const geocodingClient = mbxGeocoding({ accessToken: mapToken });
@@ -7,14 +8,23 @@ function escapeRegex(value = "") {
     return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function normalizeToStartOfDay(inputDate) {
+    const date = new Date(inputDate);
+    date.setHours(0, 0, 0, 0);
+    return date;
+}
+
 module.exports.index = async(req, res) => {
     const q = (req.query.q || "").trim();
     const country = (req.query.country || "").trim();
     const sort = req.query.sort || "latest";
+    const checkInRaw = (req.query.checkIn || "").trim();
+    const checkOutRaw = (req.query.checkOut || "").trim();
     const minPriceRaw = req.query.minPrice;
     const maxPriceRaw = req.query.maxPrice;
     let minPrice = minPriceRaw !== undefined && minPriceRaw !== "" ? Number(minPriceRaw) : "";
     let maxPrice = maxPriceRaw !== undefined && maxPriceRaw !== "" ? Number(maxPriceRaw) : "";
+    let availabilityError = "";
 
     if (
       minPrice !== "" &&
@@ -58,6 +68,34 @@ module.exports.index = async(req, res) => {
       }
     }
 
+    if (checkInRaw || checkOutRaw) {
+      if (!checkInRaw || !checkOutRaw) {
+        availabilityError = "Select both check-in and check-out dates to filter by availability.";
+      } else {
+        const checkIn = normalizeToStartOfDay(checkInRaw);
+        const checkOut = normalizeToStartOfDay(checkOutRaw);
+        const today = normalizeToStartOfDay(new Date());
+
+        if (Number.isNaN(checkIn.getTime()) || Number.isNaN(checkOut.getTime())) {
+          availabilityError = "Please enter valid check-in and check-out dates.";
+        } else if (checkIn < today) {
+          availabilityError = "Check-in date cannot be in the past.";
+        } else if (checkOut <= checkIn) {
+          availabilityError = "Check-out date must be after check-in.";
+        } else {
+          const unavailableListingIds = await Booking.distinct("listing", {
+            status: { $in: ["pending", "confirmed"] },
+            checkIn: { $lt: checkOut },
+            checkOut: { $gt: checkIn },
+          });
+
+          if (unavailableListingIds.length > 0) {
+            filters._id = { $nin: unavailableListingIds };
+          }
+        }
+      }
+    }
+
     let listingsQuery = Listing.find(filters);
 
     if (sort === "price_asc") {
@@ -75,12 +113,23 @@ module.exports.index = async(req, res) => {
       listingFilters: {
         q,
         country,
+        checkIn: checkInRaw,
+        checkOut: checkOutRaw,
         minPrice: minPrice === "" || Number.isNaN(minPrice) ? "" : minPrice,
         maxPrice: maxPrice === "" || Number.isNaN(maxPrice) ? "" : maxPrice,
         sort,
       },
       resultsCount: allListings.length,
-      hasActiveFilters: Boolean(q || country || minPrice !== "" || maxPrice !== "" || sort !== "latest"),
+      hasActiveFilters: Boolean(
+        q ||
+        country ||
+        checkInRaw ||
+        checkOutRaw ||
+        minPrice !== "" ||
+        maxPrice !== "" ||
+        sort !== "latest"
+      ),
+      availabilityError,
     });
 };
 
