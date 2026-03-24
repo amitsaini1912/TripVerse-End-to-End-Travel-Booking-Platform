@@ -38,6 +38,29 @@ const listingSchema = new mongoose.Schema({
       }
     });
 
+listingSchema.index({ price: 1 });
+listingSchema.index({ country: 1, price: 1 });
+listingSchema.index({ location: 1, country: 1 });
+listingSchema.index({ owner: 1 });
+listingSchema.index({ geometry: "2dsphere" });
+listingSchema.index(
+  {
+    title: "text",
+    description: "text",
+    location: "text",
+    country: "text",
+  },
+  {
+    name: "listing_text_search",
+    weights: {
+      title: 5,
+      location: 4,
+      country: 3,
+      description: 1,
+    },
+  }
+);
+
 //to delete reviews when listing was deleted
     listingSchema.post("findOneAndDelete", async(listing) =>{
       if(listing){

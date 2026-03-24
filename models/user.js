@@ -34,6 +34,9 @@ const userSchema = new mongoose.Schema ({
     },
 });
 
+userSchema.index({ role: 1 });
+userSchema.index({ hostRequestStatus: 1, hostRequestSubmittedAt: -1 });
+
 userSchema.plugin(passportLocalMongoose); //This plugin set a username and password in hash form 
 
 const User = mongoose.model("User", userSchema);

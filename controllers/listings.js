@@ -14,6 +14,19 @@ function normalizeToStartOfDay(inputDate) {
     return date;
 }
 
+function buildRegexSearchQuery(baseFilters, queryText) {
+    const regex = new RegExp(escapeRegex(queryText), "i");
+    return {
+      ...baseFilters,
+      $or: [
+        { title: regex },
+        { description: regex },
+        { location: regex },
+        { country: regex },
+      ],
+    };
+}
+
 module.exports.index = async(req, res) => {
     const q = (req.query.q || "").trim();
     const country = (req.query.country || "").trim();
@@ -37,16 +50,6 @@ module.exports.index = async(req, res) => {
     }
 
     const filters = {};
-
-    if (q) {
-      const regex = new RegExp(escapeRegex(q), "i");
-      filters.$or = [
-        { title: regex },
-        { description: regex },
-        { location: regex },
-        { country: regex },
-      ];
-    }
 
     if (country) {
       filters.country = new RegExp(escapeRegex(country), "i");
@@ -96,12 +99,46 @@ module.exports.index = async(req, res) => {
       }
     }
 
-    let listingsQuery = Listing.find(filters);
+    let listingsQuery;
+    let usedTextSearch = false;
+
+    if (q) {
+      const textSearchQuery = {
+        ...filters,
+        $text: { $search: q },
+      };
+
+      try {
+        const hasTextResults = await Listing.exists(textSearchQuery);
+
+        if (hasTextResults) {
+          listingsQuery = Listing.find(textSearchQuery, {
+            score: { $meta: "textScore" },
+          });
+          usedTextSearch = true;
+        } else {
+          listingsQuery = Listing.find(buildRegexSearchQuery(filters, q));
+        }
+      } catch (err) {
+        const message = err && typeof err.message === "string" ? err.message.toLowerCase() : "";
+        const isTextIndexIssue = message.includes("$text") || message.includes("text index");
+
+        if (isTextIndexIssue) {
+          listingsQuery = Listing.find(buildRegexSearchQuery(filters, q));
+        } else {
+          throw err;
+        }
+      }
+    } else {
+      listingsQuery = Listing.find(filters);
+    }
 
     if (sort === "price_asc") {
       listingsQuery = listingsQuery.sort({ price: 1, _id: -1 });
     } else if (sort === "price_desc") {
       listingsQuery = listingsQuery.sort({ price: -1, _id: -1 });
+    } else if (usedTextSearch) {
+      listingsQuery = listingsQuery.sort({ score: { $meta: "textScore" }, _id: -1 });
     } else {
       listingsQuery = listingsQuery.sort({ _id: -1 });
     }
