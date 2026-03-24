@@ -1,4 +1,4 @@
-﻿# WanderLust Runbook
+﻿# TripVerse Runbook
 
 This runbook is for local development, demo preparation, and basic operational checks.
 
@@ -15,7 +15,7 @@ This runbook is for local development, demo preparation, and basic operational c
 Create `.env` in the project root:
 
 ```env
-DB_URL=mongodb://127.0.0.1:27017/wanderlust
+DB_URL=mongodb://127.0.0.1:27017/tripverse
 SECRET=replace_with_a_long_session_secret
 PORT=8000
 MAP_TOKEN=your_mapbox_token
@@ -196,4 +196,5 @@ npm run seed:demo
 ```
 
 The demo seed script is designed to clean and recreate only the demo-labeled records it owns.
+
 

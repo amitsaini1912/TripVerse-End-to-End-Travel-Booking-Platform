@@ -1,6 +1,6 @@
-﻿# WanderLust Upgrade Notes (Day 1 to Day 20)
+﻿# WanderLust to TripVerse Upgrade Notes
 
-WanderLust is an Express + EJS + MongoDB booking platform inspired by stay-listing marketplaces. This project started as a listing and review app and was upgraded in a 20-day sprint toward an end-to-end booking platform.
+WanderLust was a Express + EJS + MongoDB booking platform inspired by stay-listing marketplaces. This project began as WanderLust and was upgraded into TripVerse over a 20-day sprint toward an end-to-end booking platform.
 
 This README documents:
 
@@ -56,7 +56,7 @@ app.js           Application entry point
 Create a `.env` file with the following values:
 
 ```env
-DB_URL=mongodb://127.0.0.1:27017/wanderlust
+DB_URL=mongodb://127.0.0.1:27017/tripverse
 SECRET=replace_with_a_long_session_secret
 PORT=8000
 
@@ -245,4 +245,5 @@ npm run seed:demo
 
 - This README is the Day 1 to Day 20 project log and onboarding reference.
 - Later experimental work should be documented separately so this file stays aligned with the stable sprint milestone.
+
 
