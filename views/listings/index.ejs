@@ -1,118 +1,209 @@
 <% layout("./layouts/boilerplate.ejs") -%>
-    <style>
-        #filters{
-          display: flex;
-          flex-wrap: wrap;
-          align-items: center;
-        }
-        .filter{
-          margin-top: 1rem;
-          margin-bottom: 1rem;
-          text-align: center;
-          margin-right: 2rem;
-          opacity: 0.85;
-        }
-        .filter p{
-          font-size: 0.8rem;
-        }
-        .filter:hover{
-          opacity: 1;
-          cursor: pointer;
-        }
-        .tax-info{
-          display: none;
-        }
-        .tax-toggle{
-          border: 1px solid black ;
-          border-radius: 1rem;
-          height: 3.1rem;
-          padding: 0.8rem;
-          display: flex;
-          flex-wrap: wrap;
-          margin-bottom: 0.5rem;
-          margin-left: 5rem;
-        }
-        .filter a{
-          text-decoration: none;
-          color: black;
-        }
-    </style>
+<%
+  const safeListings = typeof allListings !== "undefined" && Array.isArray(allListings) ? allListings : [];
+  const safeFilters = typeof listingFilters !== "undefined" && listingFilters
+    ? listingFilters
+    : { q: "", country: "", minPrice: "", maxPrice: "", sort: "latest" };
+  const safeResultsCount = typeof resultsCount !== "undefined" ? resultsCount : safeListings.length;
+  const safeHasActiveFilters = typeof hasActiveFilters !== "undefined"
+    ? hasActiveFilters
+    : Boolean(
+        safeFilters.q ||
+        safeFilters.country ||
+        safeFilters.minPrice !== "" ||
+        safeFilters.maxPrice !== "" ||
+        safeFilters.sort !== "latest"
+      );
+%>
 
-    <div id="filters">
-      <div class="filter">
-         <a href="/listings"><div><i class="fa-solid fa-fire"></i></div>
-         <p>Trending</p></a>
+<style>
+  .filters-panel {
+    border: 1px solid #e5e5e5;
+    border-radius: 1.25rem;
+    padding: 1.25rem;
+    background: #fff;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.04);
+  }
+
+  .results-summary {
+    border: 1px solid #ececec;
+    border-radius: 1rem;
+    background: #fff;
+  }
+
+  .tax-toggle {
+    border: 1px solid black;
+    border-radius: 1rem;
+    padding: 0.8rem 1rem;
+    display: inline-flex;
+    margin-top: 1rem;
+  }
+
+  .tax-info {
+    display: none;
+  }
+
+  @media (max-width: 991.98px) {
+    .filters-panel.sticky-top {
+      position: static;
+      top: auto !important;
+    }
+  }
+</style>
+
+<div class="row mt-3 g-4">
+  <div class="col-lg-3">
+    <div class="filters-panel sticky-top" style="top: 5rem;">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">Filter Listings</h5>
+        <% if (safeHasActiveFilters) { %>
+          <a href="/listings" class="btn btn-sm btn-outline-secondary">Reset</a>
+        <% } %>
       </div>
-      <div class="filter">
-         <a href="/listings"><div><i class="fa-solid fa-bed"></i></div>
-         <p>Rooms</p></a>
-      </div>
-      <div class="filter">
-         <a href="/listings"><div><i class="fa-solid fa-mountain"></i></div>
-         <p>Mountans</p></a>
-      </div>
-      <div class="filter">
-          <a href="/listings"><div><i class="fa-solid fa-mountain-city"></i></div>
-         <p>Iconic Cities</p></a>
-      </div>
-      <div class="filter">
-          <a href="/listings"><div><i class="fa-solid fa-fort-awesome"></i></div>
-         <p>Amazing Views</p></a>
-      </div>
-      <div class="filter">
-          <a href="/listings"><div><i class="fa-solid fa-cow"></i></div>
-         <p>Farms</p></a>
-      </div>
-      <div class="filter">
-          <a href="/listings"><div><i class="fa-solid fa-mountain-city"></i></div>
-         <p>Castles</p></a>
-      </div>
-      <div class="filter">
-          <a href="/listings"><div><i class="fa-solid fa-person-swimming"></i></div>
-         <p>Amazing Pools</p></a>
-      </div>
-      <div class="filter">
-          <a href="/listings"><div><i class="fa-solid fa-campground"></i></div>
-         <p>Arctic</p></a>
-      </div>
+
+      <form method="GET" action="/listings">
+        <div class="mb-3">
+          <label for="qFilter" class="form-label">Search</label>
+          <input
+            id="qFilter"
+            name="q"
+            class="form-control"
+            type="text"
+            placeholder="Title, location, country..."
+            value="<%= safeFilters.q %>"
+          >
+        </div>
+
+        <div class="mb-3">
+          <label for="countryFilter" class="form-label">Country</label>
+          <input
+            id="countryFilter"
+            name="country"
+            class="form-control"
+            type="text"
+            placeholder="India, France, Japan..."
+            value="<%= safeFilters.country %>"
+          >
+        </div>
+
+        <div class="row">
+          <div class="col-6 mb-3">
+            <label for="minPriceFilter" class="form-label">Min Price</label>
+            <input
+              id="minPriceFilter"
+              name="minPrice"
+              class="form-control"
+              type="number"
+              min="0"
+              placeholder="0"
+              value="<%= safeFilters.minPrice %>"
+            >
+          </div>
+          <div class="col-6 mb-3">
+            <label for="maxPriceFilter" class="form-label">Max Price</label>
+            <input
+              id="maxPriceFilter"
+              name="maxPrice"
+              class="form-control"
+              type="number"
+              min="0"
+              placeholder="5000"
+              value="<%= safeFilters.maxPrice %>"
+            >
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label for="sortFilter" class="form-label">Sort By</label>
+          <select id="sortFilter" name="sort" class="form-select">
+            <option value="latest" <%= safeFilters.sort === "latest" ? "selected" : "" %>>Latest</option>
+            <option value="price_asc" <%= safeFilters.sort === "price_asc" ? "selected" : "" %>>Price: Low to High</option>
+            <option value="price_desc" <%= safeFilters.sort === "price_desc" ? "selected" : "" %>>Price: High to Low</option>
+          </select>
+        </div>
+
+        <div class="d-grid">
+          <button class="btn btn-dark" type="submit">Apply Filters</button>
+        </div>
+      </form>
+
       <div class="tax-toggle">
-        <div class="form-check-reverse form-switch">
+        <div class="form-check-reverse form-switch mb-0">
           <input class="form-check-input" type="checkbox" role="switch" id="flexSwitchCheckDefault">
           <label class="form-check-label" for="flexSwitchCheckDefault">Display total after taxes &nbsp;</label>
         </div>
       </div>
     </div>
-    <div class="row row-cols-lg-3 row-cols-md-2 row-cols-sm-1">
-        <% for(let listing of allListings) { %>
-            <a href="/listings/<%=listing._id%>" class="listing_link">
-              <div class="card col listing-card style="width: 18rem;">
-                <img src="<%= (listing.image && listing.image.url) ? listing.image.url : 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?q=80&w=1200&auto=format&fit=crop' %>" class="card-img-top" alt="Listing_image" style="height: 16rem;">
+  </div>
+
+  <div class="col-lg-9">
+    <div class="results-summary p-3 mb-3">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+          <h4 class="mb-1">Explore Stays</h4>
+          <p class="text-muted mb-0">
+            <%= safeResultsCount %> listing<%= safeResultsCount === 1 ? "" : "s" %> found
+            <% if (safeFilters.q) { %>
+              for "<%= safeFilters.q %>"
+            <% } %>
+          </p>
+        </div>
+        <% if (safeHasActiveFilters) { %>
+          <span class="badge text-bg-dark">Filtered Results</span>
+        <% } %>
+      </div>
+    </div>
+
+    <% if (safeListings.length === 0) { %>
+      <div class="alert alert-info">
+        No listings matched your search. Try changing the country, price range, or search text.
+      </div>
+    <% } else { %>
+      <div class="row row-cols-2 row-cols-lg-3 g-4">
+        <% for(let listing of safeListings) { %>
+          <div class="col">
+            <a href="/listings/<%= listing._id %>" class="listing_link">
+              <div class="card listing-card h-100">
+                <img
+                  src="<%= (listing.image && listing.image.url) ? listing.image.url : 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?q=80&w=1200&auto=format&fit=crop' %>"
+                  class="card-img-top"
+                  alt="Listing_image"
+                  style="height: 16rem;"
+                >
                 <div class="card-img-overlay"></div>
                 <div class="card-body">
-                  <p class="card-text">
-                   <b><%= listing.location %></b> <br>
-                   &#8377; <%= listing.price.toLocaleString("en-IN") %>/night
-                   <i class="tax-info">&nbsp; &nbsp;+18% GST</i>
+                  <p class="card-text mb-1">
+                    <b><%= listing.title %></b>
+                  </p>
+                  <p class="card-text mb-1 text-muted">
+                    <%= listing.location %>, <%= listing.country %>
+                  </p>
+                  <p class="card-text mb-0">
+                    &#8377; <%= Number(listing.price || 0).toLocaleString("en-IN") %>/night
+                    <i class="tax-info">&nbsp; &nbsp;+18% GST</i>
                   </p>
                 </div>
               </div>
             </a>
-        <% } %>   
-    </div>
+          </div>
+        <% } %>
+      </div>
+    <% } %>
+  </div>
+</div>
 
-    <script>
-       let taxSwitch = document.getElementById("flexSwitchCheckDefault");
-       taxSwitch.addEventListener("click", () =>{
-        let taxInfo = document.getElementsByClassName("tax-info");
-        for(info of taxInfo){
-          if(info.style.display != "inline"){
-            info.style.display = "inline";
-          }else{
-            info.style.display = "none";
-          }
+<script>
+  let taxSwitch = document.getElementById("flexSwitchCheckDefault");
+  if (taxSwitch) {
+    taxSwitch.addEventListener("click", () => {
+      let taxInfo = document.getElementsByClassName("tax-info");
+      for (let info of taxInfo) {
+        if (info.style.display !== "inline") {
+          info.style.display = "inline";
+        } else {
+          info.style.display = "none";
         }
-       })
-    </script>
-
-
-
+      }
+    });
+  }
+</script>

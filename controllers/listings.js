@@ -3,9 +3,85 @@ const mbxGeocoding = require('@mapbox/mapbox-sdk/services/geocoding');
 const mapToken = process.env.MAP_TOKEN;
 const geocodingClient = mbxGeocoding({ accessToken: mapToken });
 
+function escapeRegex(value = "") {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 module.exports.index = async(req, res) => {
-    const allListings = await Listing.find({});
-    res.render("listings/index.ejs", { allListings });
+    const q = (req.query.q || "").trim();
+    const country = (req.query.country || "").trim();
+    const sort = req.query.sort || "latest";
+    const minPriceRaw = req.query.minPrice;
+    const maxPriceRaw = req.query.maxPrice;
+    let minPrice = minPriceRaw !== undefined && minPriceRaw !== "" ? Number(minPriceRaw) : "";
+    let maxPrice = maxPriceRaw !== undefined && maxPriceRaw !== "" ? Number(maxPriceRaw) : "";
+
+    if (
+      minPrice !== "" &&
+      maxPrice !== "" &&
+      !Number.isNaN(minPrice) &&
+      !Number.isNaN(maxPrice) &&
+      minPrice > maxPrice
+    ) {
+      [minPrice, maxPrice] = [maxPrice, minPrice];
+    }
+
+    const filters = {};
+
+    if (q) {
+      const regex = new RegExp(escapeRegex(q), "i");
+      filters.$or = [
+        { title: regex },
+        { description: regex },
+        { location: regex },
+        { country: regex },
+      ];
+    }
+
+    if (country) {
+      filters.country = new RegExp(escapeRegex(country), "i");
+    }
+
+    if (minPrice !== "" || maxPrice !== "") {
+      filters.price = {};
+
+      if (minPrice !== "" && !Number.isNaN(minPrice)) {
+        filters.price.$gte = minPrice;
+      }
+
+      if (maxPrice !== "" && !Number.isNaN(maxPrice)) {
+        filters.price.$lte = maxPrice;
+      }
+
+      if (Object.keys(filters.price).length === 0) {
+        delete filters.price;
+      }
+    }
+
+    let listingsQuery = Listing.find(filters);
+
+    if (sort === "price_asc") {
+      listingsQuery = listingsQuery.sort({ price: 1, _id: -1 });
+    } else if (sort === "price_desc") {
+      listingsQuery = listingsQuery.sort({ price: -1, _id: -1 });
+    } else {
+      listingsQuery = listingsQuery.sort({ _id: -1 });
+    }
+
+    const allListings = await listingsQuery;
+
+    res.render("listings/index.ejs", {
+      allListings,
+      listingFilters: {
+        q,
+        country,
+        minPrice: minPrice === "" || Number.isNaN(minPrice) ? "" : minPrice,
+        maxPrice: maxPrice === "" || Number.isNaN(maxPrice) ? "" : maxPrice,
+        sort,
+      },
+      resultsCount: allListings.length,
+      hasActiveFilters: Boolean(q || country || minPrice !== "" || maxPrice !== "" || sort !== "latest"),
+    });
 };
 
 module.exports.renderNewForm =  (req, res) => {

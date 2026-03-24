@@ -1,4 +1,7 @@
 <style>
+  .navbar{
+    z-index: 1080;
+  }
   .search-btn{
     background-color: #fe424d;
     color: #fff;
@@ -20,6 +23,40 @@
   .navbar-collapse{
     background-color: #fff;
   }
+
+  @media (max-width: 767.98px){
+    .navbar-collapse{
+      position: relative;
+      z-index: 1090;
+      padding: 0.75rem 0 1rem;
+      border-top: 1px solid #ececec;
+      box-shadow: 0 0.75rem 1.5rem rgba(0, 0, 0, 0.08);
+    }
+
+    .navbar-nav{
+      gap: 0.35rem;
+    }
+
+    .navbar-nav.ms-auto{
+      margin-left: 0 !important;
+      margin-top: 0.75rem;
+    }
+
+    .navbar-nav .nav-link{
+      padding-left: 0;
+      padding-right: 0;
+    }
+
+    .navbar form[role="search"]{
+      display: flex;
+      flex-wrap: nowrap;
+      width: 100%;
+    }
+
+    .search-inp{
+      min-width: 0;
+    }
+  }
 </style>
 
 <nav class="navbar navbar-expand-md bg-body-tertiary sticky-top border-bottom">
@@ -34,8 +71,15 @@
           <a class="nav-link active" href="/listings"><b>Explore</b></a>
         </div>
         <div class="navbar-nav ms-auto">
-          <form class="d-flex" role="search" method="GET" action="/search">
-            <input name="key" class="form-control me-2 search-inp" type="search" placeholder="Search your destination" aria-label="Search">
+          <form class="d-flex" role="search" method="GET" action="/listings">
+            <input
+              name="q"
+              class="form-control me-2 search-inp"
+              type="search"
+              placeholder="Search your destination"
+              aria-label="Search"
+              value="<%= typeof listingFilters !== 'undefined' ? listingFilters.q : '' %>"
+            >
             <button class="btn search-btn" type="submit"><i class="fa-solid fa-search"></i>Search</button>
           </form>
         </div>

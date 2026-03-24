@@ -25,7 +25,6 @@ const webhookRouter = require("./routes/webhook.js");
 const reviewRouter = require("./routes/review.js");
 const userRouter = require("./routes/user.js");
 const adminRouter = require("./routes/admin.js");
-const Listing = require("./models/listing.js");
 
 const DB_URL = process.env.DB_URL;
 const SECRET = process.env.SECRET;
@@ -121,18 +120,12 @@ app.use("/bookings", bookingRouter);
 app.use("/", userRouter );
 app.use("/admin", adminRouter);
 app.get("/search", async(req, res) => {
-   const key = req.query.key;
-   let resultListings = await Listing.find(
-    {
-      "$or": [
-        {title: {$regex: key, $options: "i"}},
-        {description: {$regex: key, $options: "i"}},
-        {location: {$regex: key, $options: "i"}},
-        {country: {$regex: key, $options: "i"}},
-      ]
-    }
-  )
-  res.render("listings/search.ejs", {resultListings});
+   const key = (req.query.key || "").trim();
+   const searchParams = new URLSearchParams();
+   if (key) {
+    searchParams.set("q", key);
+   }
+   return res.redirect(`/listings${searchParams.toString() ? `?${searchParams.toString()}` : ""}`);
 })
 
 
