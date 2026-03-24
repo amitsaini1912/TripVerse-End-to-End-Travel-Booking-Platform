@@ -18,6 +18,7 @@
     <% } %>
 
     <form method="POST" action="/become-host" class="needs-validation" novalidate>
+      <%- include("../includes/csrf.ejs") %>
       <div class="mt-3">
         <label for="phone" class="form-label">Phone Number</label>
         <input

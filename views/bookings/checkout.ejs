@@ -59,6 +59,7 @@
     const paymentFeedback = document.getElementById("paymentFeedback");
     const bookingId = "<%= booking._id %>";
     const returnUrl = `${window.location.origin}/bookings/${bookingId}/pay/complete`;
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || "";
 
     async function syncPaymentCompletion(paymentIntentId) {
       const query = new URLSearchParams({ payment_intent: paymentIntentId });
@@ -71,6 +72,10 @@
       try {
         const response = await fetch(`/bookings/${bookingId}/payment-intent`, {
           method: "POST",
+          headers: {
+            "Accept": "application/json",
+            ...(csrfToken ? { "CSRF-Token": csrfToken } : {}),
+          },
         });
         const data = await response.json();
 
