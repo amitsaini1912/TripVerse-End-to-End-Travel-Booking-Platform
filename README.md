@@ -1,94 +1,248 @@
-# 🏨 TripVerse – End to End Hotel Booking Web App
+﻿# WanderLust Upgrade Notes (Day 1 to Day 20)
 
-**Wanderlust** is a full-stack hotel booking web application inspired by Airbnb. Built using the **MERN** stack (MongoDB, Express.js, Node.js), this project uses **EJS** for server-side rendering (no React) to deliver a seamless booking and property listing experience.
+WanderLust is an Express + EJS + MongoDB booking platform inspired by stay-listing marketplaces. This project started as a listing and review app and was upgraded in a 20-day sprint toward an end-to-end booking platform.
 
----
+This README documents:
 
-## 🚀 Key Features
+- what the project does today
+- the Day 1 to Day 20 upgrade log
+- how to run the app locally
+- where to find the runbook and demo data
 
-- 🌐 **Browse/Search Hotels**: Discover hotels with real-time search and filtering.
-- 📍 **Interactive Maps**: View hotel locations using integrated map services.
-- 📝 **User Reviews & Ratings**: Leave and read reviews to make informed decisions.
-- 🔐 **Authentication System**: Secure login/signup using session-based authentication.
-- 🏠 **Host Functionality**: Users can list and manage their own properties.
-- 💳 **Pricing Details**: Clearly displayed price and availability per listing.
-- 🌟 **Clean UI**: Built using EJS templating and CSS for a responsive, modern interface.
+## Current Scope
 
----
+The codebase currently includes:
 
-## 🔗 Live Site
+- user authentication with Passport
+- role-based access for `user`, `host`, and `admin`
+- host request workflow with admin approval
+- listing creation and management for hosts/admins
+- reviews and ratings
+- booking creation with overlap protection
+- guest and host booking dashboards
+- admin dashboards for users, listings, and bookings
+- listing search, price filters, country filters, and date availability filters
+- Stripe payment intent flow and webhook sync
+- database indexes for search and booking performance
 
-https://wanderlust-project-blfc.onrender.com/listings
+## Stack
 
----
+- Node.js
+- Express.js
+- MongoDB with Mongoose
+- EJS + EJS-Mate
+- Passport + passport-local-mongoose
+- Cloudinary for image upload
+- Mapbox Geocoding
+- Stripe for payments
 
-## 📁 Folder Structure
+## Project Structure
 
-├── controllers/ # Route logic (hotels, users, reviews)
+```text
+controllers/     Route and page logic
+models/          Mongoose models
+routes/          Express routes
+scripts/         Seed scripts
+utils/           Shared helpers
+views/           EJS templates
+public/          Static CSS/JS/assets
+middleware.js    Auth and request guards
+schema.js        Joi schemas used by the app
+app.js           Application entry point
+```
 
-├── models/ # Mongoose schemas
+## Environment Variables
 
-├── routes/ # Express routes
+Create a `.env` file with the following values:
 
-├── views/ # EJS templates (hotels, layouts, users)
+```env
+DB_URL=mongodb://127.0.0.1:27017/wanderlust
+SECRET=replace_with_a_long_session_secret
+PORT=8000
 
-├── utils/ # Utility functions (e.g. geocoding)
+MAP_TOKEN=your_mapbox_token
 
-├── public/ # Static assets (CSS, images)
+CLOUD_NAME=your_cloudinary_cloud_name
+CLOUD_API_KEY=your_cloudinary_api_key
+CLOUD_API_SECRET=your_cloudinary_api_secret
 
-├── middleware.js # Custom middlewares (auth, validation)
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_PUBLISHABLE_KEY=pk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
 
-├── app.js # Entry point
+ADMIN_USERNAME=demo_admin
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=Admin@12345
+```
 
-└── .env # Environment variables
+Notes:
 
+- `DB_URL` and `SECRET` are required at startup.
+- Cloudinary and Mapbox are required for listing creation.
+- Stripe variables are required only for payment flows.
 
----
+## Install And Run
 
-## 💻 Technologies Used
+```bash
+npm install
+npm start
+```
 
-- **Backend**: Node.js, Express.js
-- **Database**: MongoDB & Mongoose
-- **Templating**: EJS
-- **Authentication**: Express-Session, bcrypt
-- **File Uploads**: Cloudinary
-- **Geolocation/Maps**: Mapbox or Google Maps API
-- **Styling**: CSS, Bootstrap (optional)
-- **Validation**: Express Validator / Joi
+Open:
 
----
+```text
+http://localhost:8000/listings
+```
 
-## 🛠 Setup Instructions
+## Available Scripts
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/your-username/wanderlust.git
-   cd wanderlust
-2. npm install
-3. Set up environment variables
-4. npm app.js
+```bash
+npm start
+npm run seed:admin
+npm run seed:demo
+```
 
----
+## Day 1 To Day 20 Upgrade Log
 
-##  📸 Screenshots
-![Screenshot 2025-05-30 190339](https://github.com/user-attachments/assets/f9ed18bc-8120-47ed-925b-22b82b7bd883)
-![Screenshot 2025-05-30 185544](https://github.com/user-attachments/assets/67f18334-d4c7-4299-9988-fed9d430d144)
-![Screenshot 2025-05-30 190053](https://github.com/user-attachments/assets/b3cd5d65-2ec3-4390-be9b-423c7150484e)
-![Screenshot 2025-05-30 190109](https://github.com/user-attachments/assets/047cc90b-2a52-424d-96ea-cd9d3179aaf9)
-![Screenshot 2025-05-30 190116](https://github.com/user-attachments/assets/bc96d9be-1c6d-4b80-a58c-361366d83cb2)
-![Screenshot 2025-05-30 190126](https://github.com/user-attachments/assets/062b34e0-975f-4555-8157-8669a745d70a)
-![Screenshot 2025-05-30 190235](https://github.com/user-attachments/assets/7f21b350-d313-4a58-8af3-39f023d7d70e)
-![Screenshot 2025-05-30 190245](https://github.com/user-attachments/assets/e5b7a3fd-c797-47d0-a14a-5804c95e918c)
-![Screenshot 2025-05-30 190254](https://github.com/user-attachments/assets/ca911701-ea69-451e-ad8f-838c36cac694)
-![Screenshot 2025-05-30 190310](https://github.com/user-attachments/assets/49fbeec7-7502-467a-829c-5e2d4c15e7d4)
-![Screenshot 2025-05-30 190331](https://github.com/user-attachments/assets/976331f9-6024-413b-bc8e-673d35aa5f1b)
+### Day 1
 
+- cleaned up app startup and environment-based configuration
+- ensured the app uses `DB_URL` and `SECRET` from environment variables
+- improved session defaults and startup flow
 
+### Day 2
 
----
+- added `role` to the user model
+- introduced admin seeding support
 
-##  Made with 💖 by AMIT SAINI
+### Day 3
 
+- added RBAC middleware foundations
+- introduced `hasRole`, `isAdmin`, and host/admin ownership checks
 
+### Day 4
 
+- wired admin-only access to the admin panel
+- enabled admin-aware moderation paths
+
+### Day 5
+
+- introduced the `Booking` model
+- added booking routes and booking validation
+- created guest booking lifecycle foundations
+
+### Day 6
+
+- added booking overlap checks
+- blocked invalid date ranges
+- blocked hosts from booking their own listings
+
+### Day 7
+
+- added host booking dashboard
+- allowed host/admin booking approval and rejection
+
+### Day 8
+
+- added host analytics dashboard
+- added per-listing booking and revenue summaries
+
+### Day 9
+
+- added listing availability API
+- connected availability checks to the listing detail booking form
+
+### Day 10
+
+- added Stripe payment-intent setup
+- introduced checkout page foundation for confirmed bookings
+
+### Day 11
+
+- connected Stripe Elements-based checkout flow
+- added payment completion path and payment status updates
+
+### Day 12
+
+- added Stripe webhook support
+- synced booking payment state from webhook events
+
+### Day 13
+
+- improved failed payment handling
+- added payment retry support and safer unpaid-booking cancellation behavior
+
+### Day 14
+
+- expanded admin dashboard
+- added booking, payment, and revenue KPI cards
+- added direct user-to-host role management
+
+### Day 15
+
+- added admin listing management
+- added listing moderation and delete cleanup for related bookings
+
+### Day 16
+
+- added admin booking management
+- added booking filters and moderation actions in admin views
+
+### Day 17
+
+- merged search into the main listings page
+- added query-based search, price sorting, country filtering, and mobile index improvements
+
+### Day 18
+
+- added check-in/check-out availability filters on the listings page
+- excluded overlapping pending/confirmed bookings from search results
+
+### Day 19
+
+- added MongoDB indexes for listings, users, and bookings
+- improved query performance for search, admin pages, and availability checks
+
+### Day 20
+
+- completed the first deployment/security pass in the sprint plan
+- established the operational baseline needed before production hardening
+
+## Core User Flows
+
+### User flow
+
+1. Sign up or log in
+2. Browse listings
+3. Create a booking request
+4. Wait for host/admin confirmation
+5. Complete payment for confirmed bookings
+6. Track booking status from `My Bookings`
+
+### Host flow
+
+1. Sign up as a normal user
+2. Submit a host request
+3. Get approved by admin
+4. Add listings
+5. Review incoming booking requests
+6. Track booking analytics
+
+### Admin flow
+
+1. Log in as admin
+2. Review pending host requests
+3. Promote users to host when needed
+4. Moderate listings and bookings
+5. Monitor revenue and platform activity
+
+## Demo And Ops Docs
+
+- Runbook: [RUNBOOK.md](RUNBOOK.md)
+- Demo data guide: [DEMO_DATA.md](DEMO_DATA.md)
+
+## Notes
+
+- This README is the Day 1 to Day 20 project log and onboarding reference.
+- Later experimental work should be documented separately so this file stays aligned with the stable sprint milestone.
 
