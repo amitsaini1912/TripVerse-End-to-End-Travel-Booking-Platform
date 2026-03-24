@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const Listing = require("../models/listing.js");
 // const wrapAsync = require("../utils/wrapAsync.js");
-const {isLoggedIn, isHostOrAdmin, isOwnerOrAdmin, validateListing} = require("../middleware.js");
+const {isLoggedIn, isHostOrAdmin, isOwnerOrAdmin, validateListing, validateListingFilters} = require("../middleware.js");
 const listingControllers = require("../controllers/listings.js")
 const multer = require("multer"); //to parse file data to backend
 const {storage} = require("../cloudConfig.js");
@@ -10,8 +10,8 @@ const upload = multer({ storage })
 
 router
   .route("/")
-  .get(listingControllers.index)
-  .post(isLoggedIn, isHostOrAdmin, upload.single("listing[image]"),
+  .get(validateListingFilters, listingControllers.index)
+  .post(isLoggedIn, isHostOrAdmin, upload.single("listing[image]"), validateListing,
    listingControllers.createNewListing);
 
 router.get("/new", isLoggedIn, isHostOrAdmin, listingControllers.renderNewForm);
