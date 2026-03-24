@@ -153,13 +153,11 @@
 
                     <% if (booking.status === "pending") { %>
                       <form method="POST" action="/bookings/<%= booking._id %>/status?_method=PATCH">
-                        <%- include("../includes/csrf.ejs") %>
                         <input type="hidden" name="status" value="confirmed">
                         <input type="hidden" name="redirectTo" value="<%= redirectTo %>">
                         <button class="btn btn-outline-success btn-sm">Approve</button>
                       </form>
                       <form method="POST" action="/bookings/<%= booking._id %>/status?_method=PATCH">
-                        <%- include("../includes/csrf.ejs") %>
                         <input type="hidden" name="status" value="rejected">
                         <input type="hidden" name="redirectTo" value="<%= redirectTo %>">
                         <button class="btn btn-outline-danger btn-sm">Reject</button>
@@ -168,7 +166,6 @@
 
                     <% if ((booking.status === "pending" || booking.status === "confirmed") && booking.paymentStatus !== "paid") { %>
                       <form method="POST" action="/bookings/<%= booking._id %>/cancel?_method=PATCH">
-                        <%- include("../includes/csrf.ejs") %>
                         <input type="hidden" name="redirectTo" value="<%= redirectTo %>">
                         <button class="btn btn-outline-secondary btn-sm">Cancel</button>
                       </form>

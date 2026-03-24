@@ -67,7 +67,6 @@
 
                   <% if (booking.status === "pending" || booking.status === "confirmed") { %>
                     <form action="/bookings/<%= booking._id %>/cancel?_method=PATCH" method="POST">
-                      <%- include("../includes/csrf.ejs") %>
                       <button class="btn btn-danger btn-sm">Cancel Booking</button>
                     </form>
                   <% } %>

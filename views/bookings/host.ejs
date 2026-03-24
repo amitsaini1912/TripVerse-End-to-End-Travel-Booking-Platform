@@ -43,12 +43,10 @@
                 <% if (booking.status === "pending") { %>
                   <div class="d-flex gap-2">
                     <form method="POST" action="/bookings/<%= booking._id %>/status?_method=PATCH">
-                      <%- include("../includes/csrf.ejs") %>
                       <input type="hidden" name="status" value="confirmed">
                       <button class="btn btn-success btn-sm">Approve</button>
                     </form>
                     <form method="POST" action="/bookings/<%= booking._id %>/status?_method=PATCH">
-                      <%- include("../includes/csrf.ejs") %>
                       <input type="hidden" name="status" value="rejected">
                       <button class="btn btn-outline-danger btn-sm">Reject</button>
                     </form>

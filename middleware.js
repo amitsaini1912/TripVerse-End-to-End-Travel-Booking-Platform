@@ -1,47 +1,22 @@
 const Listing = require("./models/listing.js");
 const ExpressError = require("./utils/ExpressError.js");
-const {
-  listingSchema,
-  reviewSchema,
-  bookingSchema,
-  hostRequestSchema,
-  signUpSchema,
-  loginSchema,
-  userRoleSchema,
-  bookingStatusUpdateSchema,
-  listingFilterSchema,
-  adminBookingFilterSchema,
-} = require("./schema.js");
+const { listingSchema, reviewSchema, bookingSchema, hostRequestSchema } = require("./schema.js");
 const Review = require("./models/review.js");
 
-function saveReturnTo(req) {
-  const isSafeGetRequest =
-    req.method === "GET" &&
-    typeof req.originalUrl === "string" &&
-    req.originalUrl.startsWith("/") &&
-    !req.originalUrl.startsWith("//") &&
-    !req.originalUrl.startsWith("/login") &&
-    !req.originalUrl.startsWith("/signup") &&
-    !req.originalUrl.startsWith("/logout");
-
-  if (isSafeGetRequest) {
-    req.session.returnTo = req.originalUrl;
-  }
-}
-
 module.exports.isLoggedIn = (req, res, next) => {
+    // console.log(req.path, ".." , req.originalUrl);
     if(!req.isAuthenticated()){
-        saveReturnTo(req);
+        //redirectUrl save
+        // req.session.redirectUrl = req.originalUrl;
         req.flash("error", "You must logged in before make change!");
         return res.redirect("/login");
-    }
+    };
     next();
 };
 
 module.exports.hasRole = (...allowedRoles) => {
   return (req, res, next) => {
     if (!req.isAuthenticated()) {
-      saveReturnTo(req);
       req.flash("error", "You must logged in before make change!");
       return res.redirect("/login");
     }
@@ -151,90 +126,6 @@ module.exports.validateHostRequest = (req, res, next) => {
     const errMsg = error.details.map((el) => el.message).join(",");
     throw new ExpressError(400, errMsg);
   }
-  next();
-};
-
-module.exports.validateSignUp = (req, res, next) => {
-  const { error, value } = signUpSchema.validate(req.body, { stripUnknown: true });
-  if (error) {
-    const errMsg = error.details.map((el) => el.message).join(",");
-    throw new ExpressError(400, errMsg);
-  }
-
-  req.body = {
-    ...req.body,
-    ...value,
-  };
-  next();
-};
-
-module.exports.validateLogin = (req, res, next) => {
-  const { error, value } = loginSchema.validate(req.body, { stripUnknown: true });
-  if (error) {
-    const errMsg = error.details.map((el) => el.message).join(",");
-    throw new ExpressError(400, errMsg);
-  }
-
-  req.body = {
-    ...req.body,
-    ...value,
-  };
-  next();
-};
-
-module.exports.validateUserRoleUpdate = (req, res, next) => {
-  const { error, value } = userRoleSchema.validate(req.body, { stripUnknown: true });
-  if (error) {
-    const errMsg = error.details.map((el) => el.message).join(",");
-    throw new ExpressError(400, errMsg);
-  }
-
-  req.body = {
-    ...req.body,
-    ...value,
-  };
-  next();
-};
-
-module.exports.validateBookingStatusUpdate = (req, res, next) => {
-  const { error, value } = bookingStatusUpdateSchema.validate(req.body, { stripUnknown: true });
-  if (error) {
-    const errMsg = error.details.map((el) => el.message).join(",");
-    throw new ExpressError(400, errMsg);
-  }
-
-  req.body = {
-    ...req.body,
-    ...value,
-  };
-  next();
-};
-
-module.exports.validateListingFilters = (req, res, next) => {
-  const { error, value } = listingFilterSchema.validate(req.query, { stripUnknown: true });
-  if (error) {
-    const errMsg = error.details.map((el) => el.message).join(",");
-    throw new ExpressError(400, errMsg);
-  }
-
-  req.query = {
-    ...req.query,
-    ...value,
-  };
-  next();
-};
-
-module.exports.validateAdminBookingFilters = (req, res, next) => {
-  const { error, value } = adminBookingFilterSchema.validate(req.query, { stripUnknown: true });
-  if (error) {
-    const errMsg = error.details.map((el) => el.message).join(",");
-    throw new ExpressError(400, errMsg);
-  }
-
-  req.query = {
-    ...req.query,
-    ...value,
-  };
   next();
 };
 

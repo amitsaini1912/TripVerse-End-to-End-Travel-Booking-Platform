@@ -7,15 +7,10 @@ const app = express();
 const port = process.env.PORT || 8000;
 const mongoose = require("mongoose");
 const path = require("path");
-const helmet = require("helmet");
 const methodOverride = require("method-override");
 const ejsMate = require('ejs-mate');
-const rateLimit = require("express-rate-limit");
 // const wrapAsync = require("./utils/wrapAsync.js");
-const csrf = require("csurf");
 const ExpressError = require("./utils/ExpressError.js");
-const mongoSanitize = require("express-mongo-sanitize");
-const hpp = require("hpp");
 const session = require("express-session");
 const MongoStore = require("connect-mongo");
 const flash = require("connect-flash");
@@ -33,7 +28,6 @@ const adminRouter = require("./routes/admin.js");
 
 const DB_URL = process.env.DB_URL;
 const SECRET = process.env.SECRET;
-const isProduction = process.env.NODE_ENV === "production";
 
 if (!DB_URL) {
   throw new Error("DB_URL is required in environment variables");
@@ -60,43 +54,13 @@ async function main() {
 
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
-app.disable("x-powered-by");
-
-const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 500,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: "Too many requests from this IP. Please try again shortly.",
-});
-
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 20,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: "Too many login or signup attempts. Please try again later.",
-});
-
-const csrfProtection = csrf();
-
 app.use("/webhooks", webhookRouter);
-app.use(
-  helmet({
-    contentSecurityPolicy: false,
-    crossOriginEmbedderPolicy: false,
-  })
-);
-app.use(globalLimiter);
 app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
-app.use(mongoSanitize());
-app.use(hpp());
 app.use(methodOverride("_method"));
 app.engine("ejs", ejsMate);
 app.use(express.static(path.join(__dirname , "/public")));
 
-if (isProduction) {
+if (process.env.NODE_ENV === "production") {
   app.set("trust proxy", 1);
 }
 
@@ -115,18 +79,15 @@ store.on("error", (err) => {
 
 const sessionOptions = {
   store: store,
-  name: "wanderlust.sid",
-  proxy: isProduction,
   secret: SECRET,
   resave: false,
   saveUninitialized: false,
-  unset: "destroy",
   cookie: {
     expires: Date.now() + 7 * 24 * 60 * 60 * 1000,
     maxAge: 7 * 24 * 60 * 60 * 1000,
     httpOnly: true,
     sameSite: "lax",
-    secure: isProduction,
+    secure: process.env.NODE_ENV === "production",
   },
 };
 
@@ -138,7 +99,6 @@ app.use(passport.session());
 passport.use(new LocalStrategy(User.authenticate()));
 passport.serializeUser(User.serializeUser());
 passport.deserializeUser(User.deserializeUser());
-app.use(csrfProtection);
 
 
 app.use((req, res, next) => {
@@ -149,7 +109,6 @@ app.use((req, res, next) => {
   res.locals.success = req.flash("success");
   res.locals.error = req.flash("error");
   res.locals.currUser = req.user;
-  res.locals.csrfToken = req.csrfToken();
   next();
 });
 
@@ -158,7 +117,6 @@ app.use("/listings", listingRouter );
 app.use("/listings/:id/bookings", listingBookingRouter);
 app.use("/listings/:id/reviews", reviewRouter );
 app.use("/bookings", bookingRouter);
-app.use(["/login", "/signup"], authLimiter);
 app.use("/", userRouter );
 app.use("/admin", adminRouter);
 app.get("/search", async(req, res) => {
@@ -176,15 +134,6 @@ app.all("*", (req, res, next) => {
 });
 
 app.use((err, req, res, next) => {
-  if (err.code === "EBADCSRFTOKEN") {
-    const message = "Your form session expired or became invalid. Please refresh and try again.";
-    if (req.get("accept") === "application/json") {
-      return res.status(403).json({ message });
-    }
-    req.flash("error", message);
-    return res.redirect(req.get("referer") || "/listings");
-  }
-
   let { statusCode=500, message="Somthing went wrong" } = err;
   res.status(statusCode).render("error.ejs", {message})
   // res.status(statusCode).send(message);

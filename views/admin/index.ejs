@@ -109,11 +109,9 @@
 
                 <div class="d-flex gap-2">
                   <form method="POST" action="/admin/users/<%= user._id %>/approve-host?_method=PATCH">
-                    <%- include("../includes/csrf.ejs") %>
                     <button class="btn btn-success btn-sm">Approve Host</button>
                   </form>
                   <form method="POST" action="/admin/users/<%= user._id %>/reject-host?_method=PATCH">
-                    <%- include("../includes/csrf.ejs") %>
                     <button class="btn btn-outline-danger btn-sm">Reject</button>
                   </form>
                 </div>
@@ -150,13 +148,11 @@
               <td>
                 <% if (user.role === "user") { %>
                   <form method="POST" action="/admin/users/<%= user._id %>/role?_method=PATCH" class="d-inline">
-                    <%- include("../includes/csrf.ejs") %>
                     <input type="hidden" name="role" value="host">
                     <button class="btn btn-sm btn-outline-success">Make Host</button>
                   </form>
                 <% } else if (user.role === "host") { %>
                   <form method="POST" action="/admin/users/<%= user._id %>/role?_method=PATCH" class="d-inline">
-                    <%- include("../includes/csrf.ejs") %>
                     <input type="hidden" name="role" value="user">
                     <button class="btn btn-sm btn-outline-secondary">Make User</button>
                   </form>
